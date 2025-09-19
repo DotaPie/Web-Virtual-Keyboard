@@ -14,7 +14,7 @@
 // Formatting rules applied:
 //   * Allman braces style: function()\n{ ... }
 //   * Tabs (visual width 4)
-//   * No single-line if/for without curly braces
+//   * No single-line if/for without curly brackets
 // ============================================================================
 
 // ---------- Config ----------
@@ -147,235 +147,466 @@ bool deletePreset(const String& name)
 const char* PAGE_HTML = R"HTML(
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Web Virtual Keyboard</title>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Web Virtual Keyboard</title>
 
-<style>
-:root {
-  --bg:#121315; --text:#f1f3f5; --muted:#a8acb3; --card:#1b1c20; --border:#2b2d33;
-  --accent-1:#ff7a18; --accent-2:#ffa24d; --ok:#9de19d; --err:#ff8a8a; --warn:#f1c40f;
-  --radius:14px; --radius-sm:10px; --gap:10px; --pad:18px; --fs-body:16px; --fs-small:14px;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;display:flex;justify-content:center;padding:28px 16px}
-h1{margin:0 0 14px;font-size:clamp(20px,3.6vw,32px)}
-h2{margin:18px 0 10px;font-size:18px;color:var(--muted);font-weight:700;letter-spacing:.3px}
+		<style>
+			:root
+			{
+				--bg: #121315;
+				--text: #f1f3f5;
+				--muted: #a8acb3;
+				--card: #1b1c20;
+				--border: #2b2d33;
 
-.card{width:min(780px,100%);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:var(--pad)}
-.row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--gap)}
-.row + .row{margin-top:10px}
+				--accent-1: #ff7a18;
+				--accent-2: #ffa24d;
 
-input[type="text"]{
-  height:48px;padding:10px 14px;font-size:var(--fs-body);color:var(--text);background:#141519;
-  border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color .15s, box-shadow .15s;
-  flex:1 1 auto;min-width:0;
-}
-input[type="text"]:focus, input[type="text"]:hover{
-  border-color:var(--accent-1); box-shadow:0 0 8px 2px rgba(255,122,24,.35);
-}
+				--ok: #9de19d;
+				--err: #ff8a8a;
+				--warn: #f1c40f;
 
-input[type="checkbox"]{width:20px;height:20px;accent-color:var(--accent-1);cursor:pointer}
-.checkbox{display:inline-flex;align-items:center;gap:8px}
+				--radius: 14px;
+				--radius-sm: 10px;
 
-button{
-  height:48px;padding:0 20px;border:0;border-radius:var(--radius-sm);font-weight:700;color:#101114;cursor:pointer;
-  background:linear-gradient(180deg,var(--accent-1) 0%, var(--accent-2) 100%);transition:filter .15s, box-shadow .15s;
-}
-button:hover{filter:brightness(1.15);box-shadow:0 0 14px 4px rgba(255,122,24,.6)}
-button:active{filter:brightness(1.05)}
-button:disabled{opacity:.65;cursor:not-allowed}
+				--gap: 10px;
+				--pad: 18px;
 
-.hr{height:1px;background:var(--border);margin:16px 0}
-.small{font-size:var(--fs-small);color:var(--muted)}
-#msg{margin-top:10px;font-size:var(--fs-small);color:var(--muted);min-height:1.2em}
-#msg.ok{color:var(--ok)} #msg.err{color:var(--err)} #msg.warn{color:var(--warn)}
+				--fs-body: 16px;
+				--fs-small: 14px;
+			}
 
-.kv{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
-.kv .name{font-weight:600;color:var(--text);word-break:break-word}
-.kv .val{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
-/* removed blur intentionally */
-.kv + .kv{border-top:1px dashed var(--border);padding-top:10px;margin-top:10px}
+			* { box-sizing: border-box; }
 
-/* small action buttons */
-.btn-sm{height:38px;padding:0 14px;border-radius:10px}
-</style>
-</head>
+			body
+			{
+				margin: 0;
+				background: var(--bg);
+				color: var(--text);
+				font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial, sans-serif;
+				display: flex;
+				justify-content: center;
+				padding: 28px 16px;
+			}
 
-<body>
-  <div class="card">
-    <h1>Web Virtual Keyboard</h1>
+			h1
+			{
+				margin: 0 0 14px;
+				font-size: clamp(20px, 3.6vw, 32px);
+			}
 
-    <!-- Manual send -->
-    <div class="row">
-      <input id="text" type="text" placeholder="Enter text here" autocomplete="off">
-      <button id="send" type="button">Send</button>
-    </div>
+			h2
+			{
+				margin: 18px 0 10px;
+				font-size: 18px;
+				color: var(--muted);
+				font-weight: 700;
+				letter-spacing: .3px;
+			}
 
-    <div class="row">
-      <label class="checkbox" for="appendNL">
-        <input type="checkbox" id="appendNL" checked>
-        <span>Auto press Enter</span>
-      </label>
-    </div>
+			.card
+			{
+				width: min(780px, 100%);
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				padding: var(--pad);
+			}
 
-    <div class="hr"></div>
+			.row
+			{
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: var(--gap);
+			}
 
-    <h2>Manage Presets</h2>
-    <div class="row">
-      <input id="pname" type="text" placeholder="Preset name">
-      <input id="pvalue" type="text" placeholder="Preset value">
-      <button id="addPreset" type="button">Add / Update</button>
-    </div>
-    <div class="row small">Values are saved persistently in flash memory</div>
-    <div class="hr"></div>
+			.row + .row
+			{
+				margin-top: 10px;
+			}
 
-    <!-- Presets list with Send + Delete -->
-    <div id="plist"></div>
+			input[type="text"]
+			{
+				height: 48px;
+				padding: 10px 14px;
+				font-size: var(--fs-body);
+				color: var(--text);
+				background: #141519;
+				border: 1px solid var(--border);
+				border-radius: var(--radius-sm);
+				outline: none;
+				transition: border-color .15s, box-shadow .15s;
+				flex: 1 1 auto;
+				min-width: 0;
+			}
 
-    <div id="msg" aria-live="polite"></div>
-  </div>
+			input[type="text"]:focus,
+			input[type="text"]:hover
+			{
+				border-color: var(--accent-1);
+				box-shadow: 0 0 8px 2px rgba(255, 122, 24, .35);
+			}
 
-<script>
-const text  = document.getElementById("text");
-const msg   = document.getElementById("msg");
-const btn   = document.getElementById("send");
-const cbNL  = document.getElementById("appendNL");
-const pname = document.getElementById("pname");
-const pval  = document.getElementById("pvalue");
-const addBtn= document.getElementById("addPreset");
-const plist = document.getElementById("plist");
+			input[type="checkbox"]
+			{
+				width: 20px;
+				height: 20px;
+				accent-color: var(--accent-1);
+				cursor: pointer;
+			}
 
-function setMsg(t, cls){
-  msg.textContent = t;
-  msg.className   = cls || "";
-}
+			.checkbox
+			{
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+			}
 
-async function sendText(value){
-  const newlineFlag = cbNL.checked ? "1" : "0";
-  const body = "text=" + encodeURIComponent(value) + "&newline=" + newlineFlag;
-  setMsg("Sending ...", "");
-  btn.disabled = true;
-  try{
-    const r = await fetch("/type", {
-      method:"POST",
-      headers:{ "Content-Type":"application/x-www-form-urlencoded" },
-      body
-    });
-    if(!r.ok){ throw new Error(); }
-    setMsg("Text sent","ok");
-  }catch(e){
-    setMsg("Sending text failed","err");
-  }finally{
-    btn.disabled = false;
-  }
-}
+			button
+			{
+				height: 48px;
+				padding: 0 20px;
+				border: 0;
+				border-radius: var(--radius-sm);
+				font-weight: 700;
+				color: #101114;
+				cursor: pointer;
+				background: linear-gradient(180deg, var(--accent-1) 0%, var(--accent-2) 100%);
+				transition: filter .15s, box-shadow .15s;
+			}
 
-btn.addEventListener("click", function(){
-  const value = text.value.trim();
-  if(!value){
-    setMsg("Enter something to send", "warn");
-    return;
-  }
-  sendText(value);
-});
+			button:hover
+			{
+				filter: brightness(1.15);
+				box-shadow: 0 0 14px 4px rgba(255, 122, 24, .6);
+			}
 
-function renderList(presets){
-  plist.innerHTML = "";
-  const names = Object.keys(presets).sort(function(a,b){ return a.localeCompare(b); });
-  if(names.length === 0){
-    plist.innerHTML = '<div class="small">No presets yet</div>';
-    return;
-  }
-  for(const n of names){
-    const row = document.createElement("div");
-    row.className = "kv";
+			button:active
+			{
+				filter: brightness(1.05);
+			}
 
-    const nameEl = document.createElement("div");
-    nameEl.className = "name";
-    nameEl.textContent = n;
+			button:disabled
+			{
+				opacity: .65;
+				cursor: not-allowed;
+			}
 
-    const valEl = document.createElement("div");
-    valEl.className = "val small";
-    valEl.textContent = presets[n]; // plain text
+			.hr
+			{
+				height: 1px;
+				background: var(--border);
+				margin: 16px 0;
+			}
 
-    const actions = document.createElement("div");
-    actions.style.display = "flex";
-    actions.style.gap = "10px";
+			.small
+			{
+				font-size: var(--fs-small);
+				color: var(--muted);
+			}
 
-    const sendBtn = document.createElement("button");
-    sendBtn.className = "btn-sm";
-    sendBtn.textContent = "Send";
-    sendBtn.addEventListener("click", function(){
-      text.value = presets[n];
-      sendText(presets[n]);
-    });
+			#msg
+			{
+				margin-top: 10px;
+				font-size: var(--fs-small);
+				color: var(--muted);
+				min-height: 1.2em;
+			}
 
-    const delBtn = document.createElement("button");
-    delBtn.className = "btn-sm";
-    delBtn.textContent = "Delete";
-    delBtn.addEventListener("click", async function(){
-      if(!confirm('Delete preset "' + n + '"?')){
-        return;
-      }
-      try{
-        const r = await fetch("/presets?name=" + encodeURIComponent(n), { method:"DELETE" });
-        if(!r.ok){ throw new Error(); }
-        await loadPresets();
-        setMsg("Delete successful", "ok");
-      }catch(e){
-        setMsg("Delete failed", "err");
-      }
-    });
+			#msg.ok  { color: var(--ok); }
+			#msg.err { color: var(--err); }
+			#msg.warn{ color: var(--warn); }
 
-    actions.appendChild(sendBtn);
-    actions.appendChild(delBtn);
+			.kv
+			{
+				display: grid;
+				grid-template-columns: 1fr auto auto;
+				gap: 10px;
+				align-items: center;
+			}
 
-    row.appendChild(nameEl);
-    row.appendChild(valEl);
-    row.appendChild(actions);
-    plist.appendChild(row);
-  }
-}
+			.kv .name
+			{
+				font-weight: 600;
+				color: var(--text);
+				word-break: break-word;
+			}
 
-async function loadPresets(){
-  try{
-    const r = await fetch("/presets");
-    if(!r.ok){ throw new Error(); }
-    const data = await r.json();
-    renderList(data);
-  }catch(e){
-    setMsg("Failed to load presets", "err");
-  }
-}
+			.kv .val
+			{
+				font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+			}
 
-addBtn.addEventListener("click", async function(){
-  const n = pname.value.trim();
-  const v = pval.value;
-  if(!n || !v){
-    setMsg("Name and value are required", "warn");
-    return;
-  }
-  addBtn.disabled = true;
-  try{
-    const body = "name=" + encodeURIComponent(n) + "&value=" + encodeURIComponent(v);
-    const r = await fetch("/presets", { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body });
-    if(!r.ok){ throw new Error(); }
-    pname.value = "";
-    pval.value  = "";
-    await loadPresets();
-    setMsg("Saving successful", "ok");
-  }catch(e){
-    setMsg("Saving failed", "err");
-  }finally{
-    addBtn.disabled = false;
-  }
-});
+			/* removed blur intentionally */
+			.kv + .kv
+			{
+				border-top: 1px dashed var(--border);
+				padding-top: 10px;
+				margin-top: 10px;
+			}
 
-loadPresets();
-</script>
-</body>
+			/* small action buttons */
+			.btn-sm
+			{
+				height: 38px;
+				padding: 0 14px;
+				border-radius: 10px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="card">
+			<h1>Web Virtual Keyboard</h1>
+
+			<!-- Manual send -->
+			<div class="row">
+				<input id="text" type="text" placeholder="Enter text here" autocomplete="off">
+				<button id="send" type="button">Send</button>
+			</div>
+
+			<div class="row">
+				<label class="checkbox" for="appendNL">
+					<input type="checkbox" id="appendNL" checked>
+					<span>Auto press Enter</span>
+				</label>
+			</div>
+
+			<div class="hr"></div>
+
+			<h2>Manage Presets</h2>
+			<div class="row">
+				<input id="pname" type="text" placeholder="Preset name">
+				<input id="pvalue" type="text" placeholder="Preset value">
+				<button id="addPreset" type="button">Add / Update</button>
+			</div>
+
+			<div class="row small">
+				Values are saved persistently in flash memory
+			</div>
+
+			<div class="hr"></div>
+
+			<!-- Presets list with Send + Delete -->
+			<div id="plist"></div>
+
+			<div id="msg" aria-live="polite"></div>
+		</div>
+
+		<script>
+			const text   = document.getElementById("text");
+			const msg    = document.getElementById("msg");
+			const btn    = document.getElementById("send");
+			const cbNL   = document.getElementById("appendNL");
+			const pname  = document.getElementById("pname");
+			const pval   = document.getElementById("pvalue");
+			const addBtn = document.getElementById("addPreset");
+			const plist  = document.getElementById("plist");
+
+			function setMsg(t, cls)
+			{
+				msg.textContent = t;
+				msg.className   = cls || "";
+			}
+
+			async function sendText(value)
+			{
+				const newlineFlag = cbNL.checked ? "1" : "0";
+				const body        = "text=" + encodeURIComponent(value) + "&newline=" + newlineFlag;
+
+				setMsg("Sending ...", "");
+				btn.disabled = true;
+
+				try
+				{
+					const r = await fetch("/type",
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/x-www-form-urlencoded" },
+						body
+					});
+
+					if (!r.ok)
+					{
+						throw new Error();
+					}
+
+					setMsg("Text sent", "ok");
+				}
+				catch (e)
+				{
+					setMsg("Sending text failed", "err");
+				}
+				finally
+				{
+					btn.disabled = false;
+				}
+			}
+
+			btn.addEventListener("click", function()
+			{
+				const value = text.value.trim();
+
+				if (!value)
+				{
+					setMsg("Enter something to send", "warn");
+					return;
+				}
+
+				sendText(value);
+			});
+
+			function renderList(presets)
+			{
+				plist.innerHTML = "";
+
+				const names = Object.keys(presets).sort(function(a, b)
+				{
+					return a.localeCompare(b);
+				});
+
+				if (names.length === 0)
+				{
+					plist.innerHTML = '<div class="small">No presets yet</div>';
+					return;
+				}
+
+				for (const n of names)
+				{
+					const row = document.createElement("div");
+					row.className = "kv";
+
+					const nameEl = document.createElement("div");
+					nameEl.className = "name";
+					nameEl.textContent = n;
+
+					const valEl = document.createElement("div");
+					valEl.className = "val small";
+					valEl.textContent = presets[n]; // plain text
+
+					const actions = document.createElement("div");
+					actions.style.display = "flex";
+					actions.style.gap = "10px";
+
+					const sendBtn = document.createElement("button");
+					sendBtn.className = "btn-sm";
+					sendBtn.textContent = "Send";
+					sendBtn.addEventListener("click", function()
+					{
+						text.value = presets[n];
+						sendText(presets[n]);
+					});
+
+					const delBtn = document.createElement("button");
+					delBtn.className = "btn-sm";
+					delBtn.textContent = "Delete";
+					delBtn.addEventListener("click", async function()
+					{
+						if (!confirm('Delete preset "' + n + '"?'))
+						{
+							return;
+						}
+
+						try
+						{
+							const r = await fetch("/presets?name=" + encodeURIComponent(n), { method: "DELETE" });
+
+							if (!r.ok)
+							{
+								throw new Error();
+							}
+
+							await loadPresets();
+							setMsg("Delete successful", "ok");
+						}
+						catch (e)
+						{
+							setMsg("Delete failed", "err");
+						}
+					});
+
+					actions.appendChild(sendBtn);
+					actions.appendChild(delBtn);
+
+					row.appendChild(nameEl);
+					row.appendChild(valEl);
+					row.appendChild(actions);
+
+					plist.appendChild(row);
+				}
+			}
+
+			async function loadPresets()
+			{
+				try
+				{
+					const r = await fetch("/presets");
+
+					if (!r.ok)
+					{
+						throw new Error();
+					}
+
+					const data = await r.json();
+					renderList(data);
+				}
+				catch (e)
+				{
+					setMsg("Failed to load presets", "err");
+				}
+			}
+
+			addBtn.addEventListener("click", async function()
+			{
+				const n = pname.value.trim();
+				const v = pval.value;
+
+				if (!n || !v)
+				{
+					setMsg("Name and value are required", "warn");
+					return;
+				}
+
+				addBtn.disabled = true;
+
+				try
+				{
+					const body = "name=" + encodeURIComponent(n) + "&value=" + encodeURIComponent(v);
+
+					const r = await fetch("/presets",
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/x-www-form-urlencoded" },
+						body
+					});
+
+					if (!r.ok)
+					{
+						throw new Error();
+					}
+
+					pname.value = "";
+					pval.value  = "";
+
+					await loadPresets();
+					setMsg("Saving successful", "ok");
+				}
+				catch (e)
+				{
+					setMsg("Saving failed", "err");
+				}
+				finally
+				{
+					addBtn.disabled = false;
+				}
+			});
+
+			loadPresets();
+		</script>
+	</body>
 </html>
 )HTML";
 
@@ -396,9 +627,9 @@ void handleType()
 		return;
 	}
 
-	const String text = server.arg("text");
+	const String text  = server.arg("text");
 	const String nlArg = server.hasArg("newline") ? server.arg("newline") : "0";
-	const bool addNL = (nlArg == "1" || nlArg == "true" || nlArg == "on");
+	const bool addNL   = (nlArg == "1" || nlArg == "true" || nlArg == "on");
 
 	LogSerial.printf("[TYPE] len=%u addNL=%s | %s\r\n",
 	                 static_cast<unsigned>(text.length()),
@@ -537,7 +768,7 @@ void setup()
 	server.on("/presets", HTTP_POST, handlePostPreset);
 	server.on("/presets", HTTP_DELETE, handleDeletePreset);
 
-	// favicon handler
+	// favicon handler (silence automatic browser request)
 	server.on("/favicon.ico", HTTP_GET, []()
 	{
 		server.send(204);   // 204 No Content
