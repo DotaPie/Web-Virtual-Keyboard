@@ -4,7 +4,7 @@
 - My use-case is to input long passwords without the need of typing them manually (where SSH is not possible)
 - Works only with ENG keyboard on target
 
-<img width="825" height="460" alt="Snímka obrazovky 2025-09-19 230531" src="https://github.com/user-attachments/assets/6764f580-fd7d-4e62-a432-80344b9e164b" />
+<img width="1230" height="450" alt="Snímka obrazovky 2025-09-20 010104" src="https://github.com/user-attachments/assets/17352ee0-8ece-45a2-9a10-6e6079c23007" />
 
 # Hardware requirements
 - ESP32-S3 with native USB
