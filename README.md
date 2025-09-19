@@ -10,3 +10,12 @@
 - ESP32-S3 with native USB
     - UART is optional, it is used to check ESP32-S3 IP in network and to read debug messages
 - Other machine to access web GUI
+
+# Quick start
+- Download and open platformio project in VS Code
+- Change `WIFI_SSID` and `WIFI_PASS`
+    - If needed, change also `UART_RX_PIN` and `UART_TX_PIN`
+- Compile & Run
+- If connection is successful, IP of the device is printed in UART
+- Plug native USB into the target machine, and UART to other machine, if you want to check IP or logs
+- On other machine you can then access device by `http://DEVICE_IP`
