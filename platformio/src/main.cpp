@@ -537,6 +537,12 @@ void setup()
 	server.on("/presets", HTTP_POST, handlePostPreset);
 	server.on("/presets", HTTP_DELETE, handleDeletePreset);
 
+	// favicon handler
+	server.on("/favicon.ico", HTTP_GET, []()
+	{
+		server.send(204);   // 204 No Content
+	});
+
 	// Start server
 	server.begin();
 	LogSerial.print("[HTTP] Server started on port 80\r\n");
