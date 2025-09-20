@@ -659,8 +659,8 @@ bool connectWiFi()
 {
 	LogSerial.printf("[WiFi] Connecting to \"%s\"...", WIFI_SSID);
 
-	WiFi.mode(WIFI_MODE_STA);
 	WiFi.setHostname(HOSTNAME);
+	WiFi.mode(WIFI_MODE_STA);
 	WiFi.begin(WIFI_SSID, WIFI_PASS);
 
 	const uint32_t start = millis();
