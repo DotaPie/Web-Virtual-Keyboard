@@ -394,9 +394,15 @@ async function sendText(value) {
 	}
 }
 
+// Allow empty / whitespace-only values (e.g., "", " ", "\r\n")
 btn.addEventListener("click", function() {
-	const value = text.value.trim();
-	if (!value) { setMsg("Enter something to send", "warn"); return; }
+	// Do NOT trim: we want to preserve spaces and CR/LF exactly.
+	const value = text.value;
+	// Only guard truly missing values (shouldn't happen for an <input>)
+	if (value === undefined || value === null) {
+		setMsg("Text field missing", "err");
+		return;
+	}
 	sendText(value);
 });
 
@@ -462,18 +468,20 @@ function renderList(presets) {
 		sendUserBtn.className = "btn-sm";
 		sendUserBtn.textContent = "Send User";
 		sendUserBtn.addEventListener("click", function() {
-			if (!entry.user) { setMsg("Empty username", "warn"); return; }
-			text.value = entry.user;
-			sendText(entry.user);
+			// Allow empty username to be sent (useful with Auto press Enter)
+			const v = entry.user || "";
+			text.value = v;
+			sendText(v);
 		});
 
 		const sendPassBtn = document.createElement("button");
 		sendPassBtn.className = "btn-sm";
 		sendPassBtn.textContent = "Send Pass";
 		sendPassBtn.addEventListener("click", function() {
-			if (!entry.pass) { setMsg("Empty password", "warn"); return; }
-			text.value = entry.pass;
-			sendText(entry.pass);
+			// Allow empty/whitespace-only passwords as well
+			const v = entry.pass || "";
+			text.value = v;
+			sendText(v);
 		});
 
 		const delBtn = document.createElement("button");
