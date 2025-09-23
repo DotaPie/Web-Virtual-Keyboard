@@ -156,7 +156,7 @@ void handleRoot()
 {
 	if (!requireAuth()) { return; }
 
-	server.send(200, "text/html; charset=utf-8", PAGE_HTML);
+	server.send(200, "text/html; charset=utf-8", INDEX_HTML);
 }
 
 // POST /type  (form: text=..., newline=0|1|true|on)

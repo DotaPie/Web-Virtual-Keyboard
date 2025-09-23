@@ -1,2 +1,4 @@
 .pio
 .vscode
+/src/html.cpp
+/include/html.h
