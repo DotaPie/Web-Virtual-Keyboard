@@ -1,7 +1,5 @@
 <!doctype html>
 <html lang="en">
-
-
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -260,11 +258,6 @@ function renderList(presets) {
 
 	for (const n of names) {
 		let entry = presets[n];
-
-		// Back-compat: legacy string value becomes { user:"", pass:"<string>" }
-		if (typeof entry === "string") {
-			entry = { user: "", pass: entry };
-		}
 
 		const row = document.createElement("div");
 		row.className = "kv";
