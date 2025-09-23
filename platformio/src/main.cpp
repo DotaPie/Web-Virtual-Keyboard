@@ -6,7 +6,7 @@
 #include "USB.h"
 #include "USBHIDKeyboard.h"
 
-#include "html.h"
+#include "html.h" // will be generated automatically when building
 #include "config.h"
 
 // ---------- Globals ----------
