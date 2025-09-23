@@ -20,8 +20,10 @@
 // ============================================================================
 
 // ---------- Config ----------
-#define WIFI_SSID        "name"
-#define WIFI_PASS        "pass"
+#define MASTER_USER      "admin"           	// <-- CHANGE THIS      
+#define MASTER_PASS      "password"    		// <-- CHANGE THIS
+#define WIFI_SSID        "some-wifi"		// <-- CHANGE THIS
+#define WIFI_PASS        "some-password"	// <-- CHANGE THIS
 #define TYPE_DELAY_MS    40
 #define UART_RX_PIN      44
 #define UART_TX_PIN      43
@@ -572,15 +574,26 @@ loadPresets();
 
 // ---------- HTTP Handlers ----------
 
+static bool requireAuth()
+{
+    if (server.authenticate(MASTER_USER, MASTER_PASS)) { return true; }
+    server.requestAuthentication();  // shows login popup
+    return false;
+}
+
 // GET /
 void handleRoot()
 {
+	if (!requireAuth()) { return; }
+
 	server.send(200, "text/html; charset=utf-8", PAGE_HTML);
 }
 
 // POST /type  (form: text=..., newline=0|1|true|on)
 void handleType()
 {
+	if (!requireAuth()) { return; }
+
 	if (!server.hasArg("text"))
 	{
 		server.send(400, "text/plain", "Missing 'text'");
@@ -614,6 +627,8 @@ void handleType()
 // GET /presets
 void handleGetPresets()
 {
+	if (!requireAuth()) { return; }
+
 	// Return raw JSON; front-end handles legacy upgrade view
 	const String json = loadPresetsJson();
 	server.send(200, "application/json; charset=utf-8", json);
@@ -622,6 +637,8 @@ void handleGetPresets()
 // POST /presets (form: name, user, pass)
 void handlePostPreset()
 {
+	if (!requireAuth()) { return; }
+
 	if (!server.hasArg("name"))
 	{
 		server.send(400, "text/plain", "Missing 'name'");
@@ -645,6 +662,8 @@ void handlePostPreset()
 // DELETE /presets?name=...
 void handleDeletePreset()
 {
+	if (!requireAuth()) { return; }
+
 	if (!server.hasArg("name"))
 	{
 		server.send(400, "text/plain", "Missing 'name'");
