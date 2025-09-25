@@ -9,8 +9,7 @@
 - **Usernames and passwords are sent via plaintext, device is only secured by simple login (once per session)**
 - **It is strongly recommended to use this device only on secured local networks**
 
-
-<img width="1230" height="450" alt="Snímka obrazovky 2025-09-20 010104" src="https://github.com/user-attachments/assets/17352ee0-8ece-45a2-9a10-6e6079c23007" />
+<img width="1227" height="503" alt="Snímka obrazovky 2025-09-25 215729" src="https://github.com/user-attachments/assets/3959b888-51c9-48d7-bdba-ff45bc24d5d8" />
 
 # Hardware requirements
 - ESP32-S3 with native USB
