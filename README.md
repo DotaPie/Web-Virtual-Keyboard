@@ -19,10 +19,10 @@
 
 # Quick start
 - Download and open platformio project in VS Code
-- Change `WIFI_SSID`, `WIFI_PASS`, `MASTER_USER` and `MASTER_PASS`
+- Change `WIFI_SSID`, `WIFI_PASS`, `MASTER_USER` and `MASTER_PASS` in `config.h`
     - If needed, change also other params
 - Compile & Run
-    - `html.cpp` and `html.h` are automatically generated during the build (from index.html)
+    - `html.cpp` and `html.h` are automatically generated during the build (from `index.html`)
 - If connection is successful, IP of the device is printed in UART
 - Plug native USB into the target machine (and UART to the other machine, if you want to check IP or logs)
 - On other machine you can then access device by `http://DEVICE_IP` (default port is 80)
