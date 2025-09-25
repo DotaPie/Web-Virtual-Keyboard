@@ -68,16 +68,24 @@ h2 { margin: 18px 0 10px; font-size: 18px; color: var(--muted); font-weight: 700
 .row--form {
 	display: grid;
 	grid-template-columns:
-		minmax(260px, 2fr)   /* preset name  */
-		minmax(200px, 1.5fr) /* username     */
-		minmax(220px, 1.5fr) /* password     */
-		auto;                /* button       */
+		minmax(260px, 2fr)
+		minmax(200px, 1.5fr)
+		minmax(220px, 1.5fr)
+		auto;
 	gap: var(--gap);
 	align-items: stretch;
 }
 
-input[type="text"], input[type="password"] {
-	height: 48px;
+/* No automatic ellipsis for the password cell */
+.val--clip {
+  text-overflow: clip !important;  /* override the .val ellipsis */
+  overflow: hidden;                 /* keep truncation */
+  white-space: nowrap;              /* single line */
+  min-width: 0;                     /* allow shrinking in grid */
+}
+
+/* Inputs & textarea share styling */
+input[type="text"], input[type="password"], textarea {
 	padding: 10px 14px;
 	font-size: var(--fs-body);
 	color: var(--text);
@@ -90,8 +98,17 @@ input[type="text"], input[type="password"] {
 	width: 100%;
 }
 
+input[type="text"], input[type="password"] { height: 48px; }
+
+textarea {
+	min-height: 96px;   /* 4 rows-ish */
+	resize: vertical;   /* allow vertical resize */
+	line-height: 1.35;
+}
+
 input[type="text"]:focus, input[type="text"]:hover,
-input[type="password"]:focus, input[type="password"]:hover {
+input[type="password"]:focus, input[type="password"]:hover,
+textarea:focus, textarea:hover {
 	border-color: var(--accent-1);
 	box-shadow: 0 0 8px 2px rgba(255, 122, 24, .35);
 }
@@ -117,14 +134,14 @@ button:disabled{ opacity: .65; cursor: not-allowed; }
 
 .kv {
 	display: grid;
-	grid-template-columns: minmax(120px, 220px) /* name */ 1fr /* values */;
+	grid-template-columns: minmax(120px, 220px) 1fr;
 	gap: 16px;
 	align-items: center;
 }
 .kv .name { font-weight: 600; color: var(--text); word-break: break-word; }
 .kv .vals {
 	display: grid;
-	grid-template-columns: 1fr 1fr max-content; /* user | pass | actions */
+	grid-template-columns: 1fr 1fr max-content;
 	gap: 12px;
 	align-items: center;
 	width: 100%;
@@ -135,7 +152,7 @@ button:disabled{ opacity: .65; cursor: not-allowed; }
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	min-width: 0; /* required for ellipsis inside grid */
+	min-width: 0;
 }
 .kv + .kv { border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 10px; }
 
@@ -146,9 +163,47 @@ button:disabled{ opacity: .65; cursor: not-allowed; }
 	cursor: pointer;
 	font-size: var(--fs-small);
 	color: var(--muted);
-	width: 4ch;           /* reserves space for “show”/“hide” */
+	width: 4ch;
 	text-align: left;
 }
+
+/* ---------- Responsive fixes ---------- */
+
+/* Tablet & small laptop: stack preset rows and let buttons wrap */
+@media (max-width: 900px) {
+  /* “Manage Presets” form: stack fields */
+  .row--form {
+    grid-template-columns: 1fr;
+  }
+
+  /* Each preset row: put the name on its own line, values below */
+  .kv {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .kv .name { min-width: 0; }
+  .kv .vals {
+    grid-template-columns: 1fr;   /* user, pass, actions each take a row */
+    row-gap: 8px;
+  }
+
+  /* Actions (Send User / Send Pass / Delete): allow wrapping */
+  .kv .vals > div:last-child {
+    flex-wrap: wrap;              /* inline style already sets display:flex */
+    gap: 10px;                    /* keep your spacing when wrapped */
+  }
+}
+
+/* Phone width: put the Send button under the textarea */
+@media (max-width: 480px) {
+  .row--send {
+    grid-template-columns: 1fr;   /* textarea on top, button below */
+  }
+  .row--send #send {
+    width: 100%;
+  }
+}
+
 </style>
 </head>
 
@@ -156,9 +211,9 @@ button:disabled{ opacity: .65; cursor: not-allowed; }
 <div class="card">
 	<h1>Web Virtual Keyboard</h1>
 
-	<!-- Wide text box + Send -->
+	<!-- Wide multi-line box + Send -->
 	<div class="row row--send">
-		<input id="text" type="text" placeholder="Enter text here" autocomplete="off">
+		<textarea id="text" placeholder="Enter text here (Shift+Enter for newline)" autocomplete="off" autofocus></textarea>
 		<button id="send" type="button">Send</button>
 	</div>
 
@@ -222,6 +277,9 @@ async function sendText(value) {
 		});
 		if (!r.ok) { throw new Error(); }
 		setMsg("Text sent", "ok");
+
+		text.value = "";
+    	text.focus();
 	} catch (e) {
 		setMsg("Sending text failed", "err");
 	} finally {
@@ -229,11 +287,9 @@ async function sendText(value) {
 	}
 }
 
-// Allow empty / whitespace-only values (e.g., "", " ", "\r\n")
+// Send on click (preserve spaces and CR/LF exactly)
 btn.addEventListener("click", function() {
-	// Do NOT trim: we want to preserve spaces and CR/LF exactly.
 	const value = text.value;
-	// Only guard truly missing values (shouldn't happen for an <input>)
 	if (value === undefined || value === null) {
 		setMsg("Text field missing", "err");
 		return;
@@ -241,9 +297,22 @@ btn.addEventListener("click", function() {
 	sendText(value);
 });
 
-function mask(s) {
+// NEW: Enter to send, Shift+Enter for newline
+text.addEventListener("keydown", function(e) {
+	if (e.key === "Enter" && !e.shiftKey) {
+		e.preventDefault();     // don't insert newline
+		btn.click();            // trigger send
+	}
+});
+
+function maskAndShorten(s) {
 	if (!s) { return ""; }
-	return "•".repeat(Math.min(s.length, 12)) + (s.length > 12 ? "…" : "");
+	return "•".repeat(Math.min(s.length, 24)) + (s.length > 24 ? "…" : "");
+}
+
+function shorten(s) {
+  if (!s) { return ""; }
+  return s.slice(0, 24) + (s.length > 24 ? "…" : "");
 }
 
 function renderList(presets) {
@@ -271,19 +340,19 @@ function renderList(presets) {
 
 		const userEl = document.createElement("div");
 		userEl.className = "val small";
-		userEl.textContent = entry.user || "";
+		userEl.textContent = shorten(entry.user || "");
 
 		const passEl = document.createElement("div");
-		passEl.className = "val small";
+		passEl.className = "val small val--clip";
 		let shown = false;
 		const passText = document.createElement("span");
-		passText.textContent = mask(entry.pass || "");
+		passText.textContent = maskAndShorten(entry.pass || "");
 		const toggle = document.createElement("span");
 		toggle.className = "toggle";
 		toggle.textContent = "show";
 		toggle.addEventListener("click", function() {
 			shown = !shown;
-			passText.textContent = shown ? (entry.pass || "") : mask(entry.pass || "");
+			passText.textContent = shown ? shorten(entry.pass || "") : maskAndShorten(entry.pass || "");
 			toggle.textContent = shown ? "hide" : "show";
 		});
 		passEl.appendChild(passText);
@@ -298,7 +367,6 @@ function renderList(presets) {
 		sendUserBtn.className = "btn-sm";
 		sendUserBtn.textContent = "Send User";
 		sendUserBtn.addEventListener("click", function() {
-			// Allow empty username to be sent (useful with Auto press Enter)
 			const v = entry.user || "";
 			text.value = v;
 			sendText(v);
@@ -308,7 +376,6 @@ function renderList(presets) {
 		sendPassBtn.className = "btn-sm";
 		sendPassBtn.textContent = "Send Pass";
 		sendPassBtn.addEventListener("click", function() {
-			// Allow empty/whitespace-only passwords as well
 			const v = entry.pass || "";
 			text.value = v;
 			sendText(v);
