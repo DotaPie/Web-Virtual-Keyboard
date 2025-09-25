@@ -16,10 +16,6 @@ def delim_for(name: str) -> str:
     d = re.sub(r'[^A-Z0-9]', '', name)[:12] or "HTML"
     return f"{d}DL"
 
-def minify_html(text: str) -> str:
-    lines = [ln.strip() for ln in text.replace("\r", "").split("\n") if ln.strip()]
-    return re.sub(r"\s+", " ", " ".join(lines))
-
 def generate_bundle():
     out_cpp.parent.mkdir(parents=True, exist_ok=True)
     out_head.parent.mkdir(parents=True, exist_ok=True)
@@ -43,7 +39,7 @@ def generate_bundle():
             cname = const_name(p.name)    # e.g. INDEX_HTML
             delim = delim_for(cname)      # e.g. INDEXHTMLDL
             raw   = p.read_text(encoding="utf-8")
-            text  = minify_html(raw)
+            text = raw
 
             h_lines.append(f"extern const char {cname}[] PROGMEM;")
             # IMPORTANT: extern on the definition to give external linkage for const
