@@ -1,7 +1,7 @@
 # Web Virtual Keyboard
 - This is a tool to create virtual keyboard with ESP32-S3
 - It can be accessed via web GUI and it can either input custom text, or use saved presets
-- Preset are made from username and password and created/edited/deleted via web GUI
+- Presets are made from username and password and created/edited/deleted via web GUI
 - My use-case is to input long usernames and passwords without the need of typing them manually or to input CLI commands, where SSH is not easily possible (because of different networks, ...)
 - Works only with ENG keyboard on target
 
