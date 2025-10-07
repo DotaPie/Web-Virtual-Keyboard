@@ -20,7 +20,7 @@
 # Quick start
 - Download and open platformio project in VS Code
 - Change `WIFI_SSID`, `WIFI_PASS`, `MASTER_USER` and `MASTER_PASS` in `config.h`
-    - If needed, change also other params
+    - If using other board than [ESP32-S3-DevKitC-1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html#getting-started), change also other params in `config.h` or `platformio.ini` as needed
 - Compile & Run
     - `html.cpp` and `html.h` are automatically generated during the build (from `index.html`)
 - If connection is successful, IP of the device is printed in UART
