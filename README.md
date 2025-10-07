@@ -2,11 +2,11 @@
 - This is a tool to create virtual keyboard with ESP32-S3
 - It can be accessed via web GUI and it can either input custom text, or use saved presets
 - Preset are made from username and password and created/edited/deleted via web GUI
-- My use-case is to input long usernames and passwords without the need of typing them manually (where SSH is not possible)
+- My use-case is to input long usernames and passwords without the need of typing them manually or to input CLI commands, where SSH is not easily possible (because of different networks, ...)
 - Works only with ENG keyboard on target
 
 **IMPORTANT**
-- **Usernames and passwords are sent via plaintext, device is only secured by simple login (once per session)**
+- **Usernames and passwords are sent as PLAINTEXT, device is only secured by simple login (once per session)**
 - **It is strongly recommended to use this device only on secured local networks**
 
 <img width="1227" height="503" alt="Snímka obrazovky 2025-09-25 215729" src="https://github.com/user-attachments/assets/3959b888-51c9-48d7-bdba-ff45bc24d5d8" />
