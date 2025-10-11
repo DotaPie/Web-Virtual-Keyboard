@@ -14,14 +14,14 @@
 
 # Hardware requirements
 - [LILYGO ESP32 T-Dongle S3](https://lilygo.cc/products/t-dongle-s3)
-    - any other ESP32-S3 with native USB
+    - or any other ESP32-S3 with native USB
 - Web browser to access GUI
 - Target machine that will use this virtual keyboard
 
 # Quick start
 - Download and open platformio project in VS Code
 - Change `WIFI_SSID`, `WIFI_PASS`, `MASTER_USER` and `MASTER_PASS` in `config.h`
-    - If using other board than [ESP32-S3-DevKitC-1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html#getting-started), change also other params in `config.h` or `platformio.ini` as needed
+    - If using other board than [LILYGO ESP32 T-Dongle S3](https://lilygo.cc/products/t-dongle-s3), change also other params in `config.h` or `platformio.ini` as needed
 - Compile & Flash
     - `html.cpp` and `html.h` are automatically generated during the build (from `web/index.html`)
 - Plug native USB into the target machine (and UART to the other machine, if you want to check IP or logs)
