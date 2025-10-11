@@ -69,6 +69,7 @@ void display_init()
     display_write_word(COLOR_WHITE, Align::RIGHT, 2, WIFI_SSID);
     display_write_word(COLOR_WHITE, Align::RIGHT, 3, MASTER_USER);
 
+        
     char temp_string[8] = "";
     sprintf(temp_string, "%d", getPresetsCount());
     display_write_word(COLOR_WHITE, Align::RIGHT, 4, temp_string);

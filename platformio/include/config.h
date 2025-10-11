@@ -14,9 +14,11 @@
 #define MAX_PRESET_LENGTH   64
 #define MAX_USER_LENGTH     128      
 #define MAX_PASS_LENGTH     128
-#define MAX_JSON_SIZE       8192 // holds all the presets, adjust accordingly
+#define MAX_JSON_SIZE       16384 // holds all the presets, adjust accordingly
 
 #define SERVER_PORT     80
 #define UART_NUMBER     0
+
+#define ENABLE_DISPLAY  true
 
 #endif

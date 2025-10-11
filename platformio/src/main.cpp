@@ -50,6 +50,7 @@ void setup()
 	LogSerial.print("[USB] HID Keyboard ready\r\n");
 	delay(200);
 
+#if ENABLE_DISPLAY
 	display_init();
 
 	if(connectWiFi())
@@ -58,8 +59,11 @@ void setup()
 	}
 	else
 	{
-		display_write_word(COLOR_ERROR, Align::RIGHT, 5, "Disconnected");	
+		display_write_word(COLOR_ERROR, Align::RIGHT, 5, "Disconnected");
 	}
+#else
+	(void)connectWiFi();
+#endif
 
 	// Initialize NVS key if absent
 	prefs.begin(PREFS_NS, false);
