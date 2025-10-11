@@ -59,9 +59,16 @@ h2 { margin: 18px 0 10px; font-size: 18px; color: var(--muted); font-weight: 700
 /* top input + Send button as grid */
 .row--send {
 	display: grid;
-	grid-template-columns: 1fr auto;
-	gap: var(--gap);
+	grid-template-columns: 1fr;
+	gap: 0;
 	align-items: stretch;
+}
+
+/* NEW: hotkey buttons under the textarea */
+.row--hotkeys {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: var(--gap);
 }
 
 /* 3 inputs + button on one line for desktop */
@@ -171,39 +178,19 @@ button:disabled{ opacity: .65; cursor: not-allowed; }
 
 /* Tablet & small laptop: stack preset rows and let buttons wrap */
 @media (max-width: 900px) {
-  /* “Manage Presets” form: stack fields */
-  .row--form {
-    grid-template-columns: 1fr;
-  }
-
-  /* Each preset row: put the name on its own line, values below */
-  .kv {
-    grid-template-columns: 1fr;
-    align-items: start;
-  }
+  .row--form { grid-template-columns: 1fr; }
+  .kv { grid-template-columns: 1fr; align-items: start; }
   .kv .name { min-width: 0; }
-  .kv .vals {
-    grid-template-columns: 1fr;   /* user, pass, actions each take a row */
-    row-gap: 8px;
-  }
-
-  /* Actions (Send User / Send Pass / Delete): allow wrapping */
-  .kv .vals > div:last-child {
-    flex-wrap: wrap;              /* inline style already sets display:flex */
-    gap: 10px;                    /* keep your spacing when wrapped */
-  }
+  .kv .vals { grid-template-columns: 1fr; row-gap: 8px; }
+  .kv .vals > div:last-child { flex-wrap: wrap; gap: 10px; }
 }
 
 /* Phone width: put the Send button under the textarea */
 @media (max-width: 480px) {
-  .row--send {
-    grid-template-columns: 1fr;   /* textarea on top, button below */
-  }
-  .row--send #send {
-    width: 100%;
-  }
+  .row--send { grid-template-columns: 1fr; }
+  .row--send #send { width: 100%; }
+  .row--hotkeys { grid-template-columns: 1fr; } /* stack hotkeys */
 }
-
 </style>
 </head>
 
@@ -213,8 +200,15 @@ button:disabled{ opacity: .65; cursor: not-allowed; }
 
 	<!-- Wide multi-line box + Send -->
 	<div class="row row--send">
-		<textarea id="text" placeholder="Enter text here (Shift+Enter for newline)" autocomplete="off" autofocus></textarea>
+		<textarea id="text" placeholder="Enter text here (Shift+Enter for newline, Enter to send)" autocomplete="off" autofocus></textarea>
+	</div>
+
+	<!-- NEW: Hotkey buttons directly below textbox -->
+	<div class="row row--hotkeys" aria-label="Hotkey actions">
 		<button id="send" type="button">Send</button>
+		<button id="btnCtrlC" type="button" title="Send Ctrl+C">Ctrl-C</button>
+		<button id="btnCtrlX" type="button" title="Send Ctrl+X">Ctrl-X</button>
+		<button id="btnCtrlAltDel" type="button" title="Send Ctrl+Alt+Del">Ctrl-Alt-Del</button>
 	</div>
 
 	<div class="row">
@@ -247,21 +241,40 @@ button:disabled{ opacity: .65; cursor: not-allowed; }
 </div>
 
 <script>
-const text   = document.getElementById("text");
-const msg    = document.getElementById("msg");
-const btn    = document.getElementById("send");
-const cbNL   = document.getElementById("appendNL");
-const pname  = document.getElementById("pname");
-const puser  = document.getElementById("puser");
-const ppass  = document.getElementById("ppass");
-const addBtn = document.getElementById("addPreset");
-const plist  = document.getElementById("plist");
+const text   	= document.getElementById("text");
+const msg    	= document.getElementById("msg");
+const btn    	= document.getElementById("send");
+const cbNL   	= document.getElementById("appendNL");
+const pname  	= document.getElementById("pname");
+const puser  	= document.getElementById("puser");
+const ppass  	= document.getElementById("ppass");
+const addBtn 	= document.getElementById("addPreset");
+const plist  	= document.getElementById("plist");
+
+/* NEW: hotkey buttons */
+const btnCtrlC      = document.getElementById("btnCtrlC");
+const btnCtrlX      = document.getElementById("btnCtrlX");
+const btnCtrlAltDel = document.getElementById("btnCtrlAltDel");
+
+/* NEW: control sequences (edit as needed for your backend) */
+const CTRL_C = "\u0003";   // ETX
+const CTRL_X = "\u0018";   // CAN
+
+/* For Ctrl+Alt+Del, different backends use different signals.
+   Replace CAD_SEQUENCE with what your server expects, e.g.:
+   - a literal token like "{CTRL}{ALT}{DEL}"
+   - a dedicated endpoint (then change sendRaw() URL)
+   - a sentinel like "\u0000CAD" that your server maps
+   - or ASCII DEL alone "\u007F" if that’s your device’s trigger
+*/
+const CAD_SEQUENCE = "{CTRL}{ALT}{DEL}";
 
 function setMsg(t, cls) {
 	msg.textContent = t;
 	msg.className   = cls || "";
 }
 
+/* Existing text sender (respects Auto press Enter) */
 async function sendText(value) {
 	const newlineFlag = cbNL.checked ? "1" : "0";
 	const body        = "text=" + encodeURIComponent(value) + "&newline=" + newlineFlag;
@@ -287,6 +300,30 @@ async function sendText(value) {
 	}
 }
 
+/* NEW: raw sender for hotkeys (IGNORES Auto press Enter) */
+async function sendRaw(chars) {
+	const body = "text=" + encodeURIComponent(chars) + "&newline=0";
+
+	setMsg("Sending ...", "");
+	// Temporarily disable only the hotkey buttons to prevent double taps
+	const hotkeyButtons = [btnCtrlC, btnCtrlX, btnCtrlAltDel];
+	hotkeyButtons.forEach(b => b.disabled = true);
+
+	try {
+		const r = await fetch("/type", {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body
+		});
+		if (!r.ok) { throw new Error(); }
+		setMsg("Hotkey sent", "ok");
+	} catch (e) {
+		setMsg("Sending hotkey failed", "err");
+	} finally {
+		hotkeyButtons.forEach(b => b.disabled = false);
+	}
+}
+
 // Send on click (preserve spaces and CR/LF exactly)
 btn.addEventListener("click", function() {
 	const value = text.value;
@@ -304,6 +341,11 @@ text.addEventListener("keydown", function(e) {
 		btn.click();            // trigger send
 	}
 });
+
+/* NEW: wire hotkey buttons */
+btnCtrlC.addEventListener("click", () => sendRaw(CTRL_C));
+btnCtrlX.addEventListener("click", () => sendRaw(CTRL_X));
+btnCtrlAltDel.addEventListener("click", () => sendRaw(CAD_SEQUENCE));
 
 function maskAndShorten(s) {
 	if (!s) { return ""; }

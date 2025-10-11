@@ -6,6 +6,7 @@
 extern const char* PREFS_NS;
 extern const char* PRESETS_K;
 
+uint16_t getPresetsCount();
 String loadPresetsJson();
 bool savePresetsJson(const String& json);
 

@@ -5,6 +5,7 @@
 #include "storage.h"
 #include "globals.h"
 #include "http_handlers.h"
+#include "display.h"
 
 bool connectWiFi()
 {
@@ -49,7 +50,16 @@ void setup()
 	LogSerial.print("[USB] HID Keyboard ready\r\n");
 	delay(200);
 
-	(void)connectWiFi();
+	display_init();
+
+	if(connectWiFi())
+	{
+		display_write_word(COLOR_OK, Align::RIGHT, 5, WiFi.localIP().toString().c_str());
+	}
+	else
+	{
+		display_write_word(COLOR_ERROR, Align::RIGHT, 5, "Disconnected");	
+	}
 
 	// Initialize NVS key if absent
 	prefs.begin(PREFS_NS, false);

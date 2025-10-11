@@ -5,6 +5,7 @@
 #include "config.h"
 #include "storage.h"
 #include "html.h" // will be generated automatically when building
+#include "display.h"
 
 // === HELPERS ===
 bool setPreset(const String& name, const String& user, const String& pass, String* errMsg = nullptr)
@@ -27,8 +28,6 @@ bool setPreset(const String& name, const String& user, const String& pass, Strin
 
 	const String json = loadPresetsJson();
 
-	DynamicJsonDocument doc(4096);
-
 	DeserializationError e = deserializeJson(doc, json);
 	if (e)
 	{
@@ -49,7 +48,7 @@ bool setPreset(const String& name, const String& user, const String& pass, Strin
 bool deletePreset(const String& name)
 {
 	const String json = loadPresetsJson();
-	DynamicJsonDocument doc(4096);
+	
 
 	if (deserializeJson(doc, json))
 	{
@@ -71,9 +70,28 @@ bool deletePreset(const String& name)
 
 static bool requireAuth()
 {
-    if (server.authenticate(MASTER_USER, MASTER_PASS)) { return true; }
-    server.requestAuthentication();  // shows login popup
+    if(server.authenticate(MASTER_USER, MASTER_PASS))
+	{ 
+		return true; 
+	}
+
+    server.requestAuthentication();
     return false;
+}
+
+static inline void sendCtrl(char k) {
+	Keyboard.press(KEY_LEFT_CTRL);
+	Keyboard.press((uint8_t)k);
+	delay(8);
+	Keyboard.releaseAll();
+}
+
+static inline void sendCtrlAltDel() {
+	Keyboard.press(KEY_LEFT_CTRL);
+	Keyboard.press(KEY_LEFT_ALT);
+	Keyboard.press(KEY_DELETE);
+	delay(8);
+	Keyboard.releaseAll();
 }
 
 // === REST API ===
@@ -87,12 +105,10 @@ void handleRoot()
 }
 
 // POST /type  (form: text=..., newline=0|1|true|on)
-void handleType()
-{
-	if (!requireAuth()) { return; }
+void handleType() {
+	if (!requireAuth()) return;
 
-	if (!server.hasArg("text"))
-	{
+	if (!server.hasArg("text")) {
 		server.send(400, "text/plain", "Missing 'text'");
 		return;
 	}
@@ -101,23 +117,25 @@ void handleType()
 	const String nlArg = server.hasArg("newline") ? server.arg("newline") : "0";
 	const bool addNL   = (nlArg == "1" || nlArg == "true" || nlArg == "on");
 
-	LogSerial.printf("[TYPE] len=%u addNL=%s | %s\r\n",
-	                 static_cast<unsigned>(text.length()),
-	                 addNL ? "yes" : "no",
-	                 text.c_str());
+	LogSerial.printf("[TYPE] len=%u addNL=%s | %s\r\n", (unsigned)text.length(), addNL ? "yes" : "no", text.c_str());
 
 	Keyboard.releaseAll();
 	delay(10);
 
-	Keyboard.print(text);
-
-	if (addNL)
-	{
-		Keyboard.print("\r\n");
+	// --- SIMPLE hotkey mapping ---
+	if (text == "\x03" || text.equalsIgnoreCase("CTRL-C") || text.equalsIgnoreCase("{CTRL+C}")) {
+		sendCtrl('c');                        
+	} else if (text == "\x18" || text.equalsIgnoreCase("CTRL-X") || text.equalsIgnoreCase("{CTRL+X}")) {
+		sendCtrl('x');                         
+	} else if (text.equalsIgnoreCase("CTRL-ALT-DEL") || text.equalsIgnoreCase("{CTRL}{ALT}{DEL}") || text.equalsIgnoreCase("{CTRL+ALT+DEL}")) {
+		sendCtrlAltDel();                      
+	} else {
+		// Regular typing
+		Keyboard.print(text);
+		if (addNL) Keyboard.print("\r\n");
 	}
 
 	delay(TYPE_DELAY_MS);
-
 	server.send(200, "text/plain", "OK");
 }
 

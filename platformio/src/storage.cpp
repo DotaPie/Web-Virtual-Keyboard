@@ -1,9 +1,28 @@
 #include "storage.h"
 #include <Wstring.h>
 #include <Preferences.h>
+#include "display.h"
+#include "globals.h"
+#include "ArduinoJson.h"
 
 const char* PREFS_NS  = "cfg";
 const char* PRESETS_K = "presets";
+
+uint16_t getPresetsCount()
+{
+    const String json = loadPresetsJson();
+
+    DeserializationError err = deserializeJson(doc, json);
+    if (err) {
+        return 0;
+    }
+
+    if (doc.is<JsonObject>()) {
+        return doc.as<JsonObject>().size();
+    }
+
+    return 0;
+}
 
 String loadPresetsJson()
 {
@@ -36,6 +55,10 @@ bool savePresetsJson(const String& json)
 
 	bool ok = p.putString(PRESETS_K, json) > 0;
 	p.end();
+
+	char temp_string[8] = "";
+    sprintf(temp_string, "%d", getPresetsCount());
+    display_write_word(COLOR_WHITE, Align::RIGHT, 4, temp_string);
 
 	return ok;
 }
