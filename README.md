@@ -10,8 +10,6 @@
 - **All text is sent as PLAINTEXT, device is only secured by simple login (once per session)**
 - **It is strongly recommended to use this device only on secured local networks**
 
-<img width="1230" height="560" alt="pic" src="https://github.com/user-attachments/assets/e1dac6ce-4c9d-4045-87dd-af628fd6060f" />
-
 # Hardware requirements
 - [LILYGO ESP32 T-Dongle S3](https://lilygo.cc/products/t-dongle-s3)
     - or any other ESP32-S3 with native USB
@@ -27,3 +25,8 @@
 - Plug native USB into the target machine (and UART to the other machine, if you want to check IP or logs)
     - If connection to Wi-Fi is successful, IP of the device is shown on display (and printed over UART)
 - In browser you can now access device by `http://DEVICE_IP` (default port is 80)
+
+
+<img width="1230" height="560" alt="pic" src="https://github.com/user-attachments/assets/e1dac6ce-4c9d-4045-87dd-af628fd6060f" />
+
+![1000002307](https://github.com/user-attachments/assets/b35ac7f9-3ec2-4a7a-bad3-ffd8b0127b56)
