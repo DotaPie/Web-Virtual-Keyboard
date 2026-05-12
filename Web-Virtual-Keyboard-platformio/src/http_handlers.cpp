@@ -94,6 +94,46 @@ static inline void sendCtrlAltDel() {
 	Keyboard.releaseAll();
 }
 
+// HID keycodes for KVM sequences (TinyUSB HID_KEY_* values)
+#define HID_SCROLL_LOCK 0x47
+#define HID_LEFT_CTRL   0xE0
+#define HID_KEY_1       0x1E  // HID keycodes for 1-4
+#define HID_KEY_2       0x1F
+#define HID_KEY_3       0x20
+#define HID_KEY_4       0x21
+
+static const uint8_t HID_NUMBERS[] = { 0, HID_KEY_1, HID_KEY_2, HID_KEY_3, HID_KEY_4 };
+
+// KVM switch sequences: double-tap a key, then press a number (1-4)
+// Uses pressRaw/releaseRaw to send exact HID keycodes.
+static inline void sendCtrlCtrlN(uint8_t n) {
+	Keyboard.pressRaw(HID_LEFT_CTRL);
+	delay(8);
+	Keyboard.releaseRaw(HID_LEFT_CTRL);
+	delay(100);
+	Keyboard.pressRaw(HID_LEFT_CTRL);
+	delay(8);
+	Keyboard.releaseRaw(HID_LEFT_CTRL);
+	delay(100);
+	Keyboard.pressRaw(HID_NUMBERS[n]);
+	delay(8);
+	Keyboard.releaseAll();
+}
+
+static inline void sendScrollScrollN(uint8_t n) {
+	Keyboard.pressRaw(HID_SCROLL_LOCK);
+	delay(8);
+	Keyboard.releaseRaw(HID_SCROLL_LOCK);
+	delay(100);
+	Keyboard.pressRaw(HID_SCROLL_LOCK);
+	delay(8);
+	Keyboard.releaseRaw(HID_SCROLL_LOCK);
+	delay(100);
+	Keyboard.pressRaw(HID_NUMBERS[n]);
+	delay(8);
+	Keyboard.releaseAll();
+}
+
 // === REST API ===
 
 // GET /
@@ -128,7 +168,12 @@ void handleType() {
 	} else if (text == "\x18" || text.equalsIgnoreCase("CTRL-X") || text.equalsIgnoreCase("{CTRL+X}")) {
 		sendCtrl('x');                         
 	} else if (text.equalsIgnoreCase("CTRL-ALT-DEL") || text.equalsIgnoreCase("{CTRL}{ALT}{DEL}") || text.equalsIgnoreCase("{CTRL+ALT+DEL}")) {
-		sendCtrlAltDel();                      
+		sendCtrlAltDel();
+	// KVM switch sequences
+	} else if (text.startsWith("CTRL-CTRL-") && text.length() == 11 && text[10] >= '1' && text[10] <= '4') {
+		sendCtrlCtrlN(text[10] - '0');
+	} else if (text.startsWith("SCROLL-SCROLL-") && text.length() == 15 && text[14] >= '1' && text[14] <= '4') {
+		sendScrollScrollN(text[14] - '0');
 	} else {
 		// Regular typing
 		Keyboard.print(text);

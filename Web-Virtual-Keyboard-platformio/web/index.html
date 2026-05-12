@@ -203,12 +203,27 @@ button:disabled{ opacity: .65; cursor: not-allowed; }
 		<textarea id="text" placeholder="Enter text here (Shift+Enter for newline, Enter to send)" autocomplete="off" autofocus></textarea>
 	</div>
 
-	<!-- NEW: Hotkey buttons directly below textbox -->
+	<!-- Hotkey buttons directly below textbox -->
 	<div class="row row--hotkeys" aria-label="Hotkey actions">
 		<button id="send" type="button">Send</button>
 		<button id="btnCtrlC" type="button" title="Send Ctrl+C">Ctrl-C</button>
 		<button id="btnCtrlX" type="button" title="Send Ctrl+X">Ctrl-X</button>
 		<button id="btnCtrlAltDel" type="button" title="Send Ctrl+Alt+Del">Ctrl-Alt-Del</button>
+	</div>
+
+	<!-- KVM switch buttons -->
+	<h2>KVM Switch</h2>
+	<div class="row row--hotkeys" aria-label="KVM Ctrl-Ctrl">
+		<button class="kvm-btn" data-seq="CTRL-CTRL-1" title="Ctrl Ctrl 1">Ctrl-Ctrl-1</button>
+		<button class="kvm-btn" data-seq="CTRL-CTRL-2" title="Ctrl Ctrl 2">Ctrl-Ctrl-2</button>
+		<button class="kvm-btn" data-seq="CTRL-CTRL-3" title="Ctrl Ctrl 3">Ctrl-Ctrl-3</button>
+		<button class="kvm-btn" data-seq="CTRL-CTRL-4" title="Ctrl Ctrl 4">Ctrl-Ctrl-4</button>
+	</div>
+	<div class="row row--hotkeys" aria-label="KVM ScrLk-ScrLk">
+		<button class="kvm-btn" data-seq="SCROLL-SCROLL-1" title="ScrLk ScrLk 1">ScrLk-ScrLk-1</button>
+		<button class="kvm-btn" data-seq="SCROLL-SCROLL-2" title="ScrLk ScrLk 2">ScrLk-ScrLk-2</button>
+		<button class="kvm-btn" data-seq="SCROLL-SCROLL-3" title="ScrLk ScrLk 3">ScrLk-ScrLk-3</button>
+		<button class="kvm-btn" data-seq="SCROLL-SCROLL-4" title="ScrLk ScrLk 4">ScrLk-ScrLk-4</button>
 	</div>
 
 	<div class="row">
@@ -342,10 +357,15 @@ text.addEventListener("keydown", function(e) {
 	}
 });
 
-/* NEW: wire hotkey buttons */
+/* Wire hotkey buttons */
 btnCtrlC.addEventListener("click", () => sendRaw(CTRL_C));
 btnCtrlX.addEventListener("click", () => sendRaw(CTRL_X));
 btnCtrlAltDel.addEventListener("click", () => sendRaw(CAD_SEQUENCE));
+
+/* Wire KVM switch buttons */
+document.querySelectorAll(".kvm-btn").forEach(b => {
+	b.addEventListener("click", () => sendRaw(b.dataset.seq));
+});
 
 function maskAndShorten(s) {
 	if (!s) { return ""; }
