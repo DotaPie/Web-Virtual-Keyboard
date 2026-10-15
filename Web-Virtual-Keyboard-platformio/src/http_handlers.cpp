@@ -1,6 +1,8 @@
 #include "http_handlers.h"
 
 #include <ArduinoJson.h>
+#include <SD_MMC.h>
+#include "sd_card.h"
 #include "globals.h"
 #include "config.h"
 #include "storage.h"
@@ -83,7 +85,7 @@ static const KeyDef* lookupKey(const String& upperName)
 //   "<CTRL><ALT><DEL>" -> hold Ctrl+Alt+Del, released together (real Ctrl+Alt+Del)
 //   "<CTRL>c"          -> Ctrl+C
 //   "<F1><F2>ca"       -> F1+F2+c chord, then "a" typed normally
-static void sendValue(const String& v)
+void sendValue(const String& v)
 {
 	uint8_t held[16];   // raw HID usages currently held (modifiers + specials)
 	uint8_t nHeld = 0;
@@ -140,6 +142,25 @@ static void sendValue(const String& v)
 				String name = v.substring(i + 1, close);
 				name.trim();
 				name.toUpperCase();
+
+				// Inline delay support: <DELAY 500> or <WAIT:1000>
+				if (name.startsWith("DELAY ") || name.startsWith("DELAY:") ||
+				    name.startsWith("WAIT ")  || name.startsWith("WAIT:"))
+				{
+					flushLiteral();
+					releaseHeld(-1);
+					int sp = name.indexOf(' ');
+
+					if (sp < 0) { sp = name.indexOf(':'); }
+					int ms = name.substring(sp + 1).toInt();
+					if (ms > 0 && ms <= 60000)
+					{
+						delay(ms);
+					}
+					i = close + 1;
+					continue;
+				}
+
 
 				const KeyDef* kd = lookupKey(name);
 				if (kd != nullptr)
@@ -337,7 +358,13 @@ void handleRoot()
 void handleType() {
 	if (!requireAuth()) return;
 
+	if (isPayloadRunning()) {
+		server.send(409, "text/plain", "A payload is currently executing over USB");
+		return;
+	}
+
 	if (!server.hasArg("text")) {
+
 		server.send(400, "text/plain", "Missing 'text'");
 		return;
 	}
@@ -503,7 +530,14 @@ void handleSendPreset()
 
 	const String value = doc.as<JsonArray>()[idx]["value"] | "";
 
+	if (isPayloadRunning())
+	{
+		server.send(409, "text/plain", "A payload is currently executing over USB");
+		return;
+	}
+
 	LogSerial.printf("[SEND] preset \"%s\" len=%u\r\n", name.c_str(), (unsigned)value.length());
+
 
 	Keyboard.releaseAll();
 	delay(10);
@@ -511,4 +545,292 @@ void handleSendPreset()
 	delay(TYPE_DELAY_MS);
 
 	server.send(200, "text/plain", "OK");
+}
+
+// === MICROSD HANDLERS ===
+
+// GET /sd/status[?refresh=1]
+void handleSdStatus()
+{
+	if (!requireAuth()) { return; }
+
+	if (!isSdCardMounted() || server.hasArg("refresh"))
+	{
+		sdInit(true);
+	}
+
+	String json = "{";
+	json += "\"mounted\":" + String(isSdCardMounted() ? "true" : "false") + ",";
+	json += "\"type\":\"" + getSdCardTypeName() + "\",";
+	json += "\"totalMB\":" + String((unsigned long)(getSdTotalBytes() / (1024ULL * 1024ULL))) + ",";
+	json += "\"usedMB\":" + String((unsigned long)(getSdUsedBytes() / (1024ULL * 1024ULL))) + ",";
+	json += "\"freeMB\":" + String((unsigned long)(getSdFreeBytes() / (1024ULL * 1024ULL))) + ",";
+	json += "\"running\":" + String(isPayloadRunning() ? "true" : "false");
+	json += "}";
+
+	server.send(200, "application/json; charset=utf-8", json);
+}
+
+// GET /sd/list?path=/
+void handleSdList()
+{
+	if (!requireAuth()) { return; }
+
+	if (!isSdCardMounted())
+	{
+		server.send(400, "application/json", "{\"error\":\"SD card not mounted\"}");
+		return;
+	}
+
+	String path = server.hasArg("path") ? server.arg("path") : "/";
+	if (!path.startsWith("/")) { path = "/" + path; }
+
+	String json = getSdListJson(path);
+	server.send(200, "application/json; charset=utf-8", json);
+}
+
+// GET /sd/file?path=/...[&download=1]
+void handleSdFile()
+{
+	if (!requireAuth()) { return; }
+
+	if (!isSdCardMounted())
+	{
+		server.send(400, "text/plain", "SD card not mounted");
+		return;
+	}
+
+	if (!server.hasArg("path"))
+	{
+		server.send(400, "text/plain", "Missing 'path'");
+		return;
+	}
+
+	String path = server.arg("path");
+	if (!path.startsWith("/")) { path = "/" + path; }
+
+	File f = SD_MMC.open(path, FILE_READ);
+	if (!f || f.isDirectory())
+	{
+		server.send(404, "text/plain", "File not found");
+		return;
+	}
+
+	String contentType = "text/plain";
+	if (server.hasArg("download"))
+	{
+		contentType = "application/octet-stream";
+		String filename = path.substring(path.lastIndexOf('/') + 1);
+		server.sendHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+	}
+
+	server.streamFile(f, contentType);
+	f.close();
+}
+
+// Upload chunk handler with robust error tracking
+static File sdUploadFile;
+static bool sdUploadOk = false;
+static String sdUploadErr = "";
+
+void handleSdUpload()
+{
+	if (!requireAuth()) { return; }
+	if (!sdUploadOk)
+	{
+		String errMsg = sdUploadErr.length() ? sdUploadErr : "Upload failed";
+		server.send(500, "application/json", "{\"status\":\"error\",\"message\":\"" + errMsg + "\"}");
+		return;
+	}
+	server.send(200, "application/json", "{\"status\":\"ok\"}");
+}
+
+void handleSdUploadChunk()
+{
+	if (!server.authenticate(MASTER_USER, MASTER_PASS))
+	{
+		if (sdUploadFile) { sdUploadFile.close(); }
+		sdUploadOk = false;
+		sdUploadErr = "Authentication failed";
+		return;
+	}
+
+	HTTPUpload& upload = server.upload();
+	if (upload.status == UPLOAD_FILE_START)
+	{
+		sdUploadOk = false;
+		sdUploadErr = "";
+
+		if (!isSdCardMounted())
+		{
+			sdUploadErr = "SD card not mounted";
+			return;
+		}
+
+		if (isPayloadRunning())
+		{
+			sdUploadErr = "Cannot upload while a payload is running";
+			return;
+		}
+
+		String filename = upload.filename;
+		if (!filename.startsWith("/")) { filename = "/" + filename; }
+
+		LogSerial.printf("[SD] Upload start: %s\r\n", filename.c_str());
+		sdUploadFile = SD_MMC.open(filename, FILE_WRITE);
+		if (!sdUploadFile)
+		{
+			sdUploadErr = "Failed to open destination file on SD";
+		}
+	}
+	else if (upload.status == UPLOAD_FILE_WRITE)
+	{
+		if (sdUploadFile && sdUploadErr.length() == 0)
+		{
+			if (upload.currentSize > 0)
+			{
+				size_t written = sdUploadFile.write(upload.buf, upload.currentSize);
+				if (written != upload.currentSize)
+				{
+					sdUploadErr = "Write error to SD card";
+					sdUploadFile.close();
+				}
+			}
+		}
+	}
+	else if (upload.status == UPLOAD_FILE_END)
+	{
+		if (sdUploadFile)
+		{
+			sdUploadFile.close();
+			if (sdUploadErr.length() == 0)
+			{
+				sdUploadOk = true;
+				LogSerial.printf("[SD] Upload finished: %u bytes\r\n", (unsigned)upload.totalSize);
+			}
+		}
+	}
+	else if (upload.status == UPLOAD_FILE_ABORTED)
+	{
+		if (sdUploadFile)
+		{
+			sdUploadFile.close();
+		}
+		sdUploadOk = false;
+		sdUploadErr = "Upload aborted";
+	}
+}
+
+// POST /sd/save (form: path, content)
+void handleSdSave()
+{
+	if (!requireAuth()) { return; }
+
+	if (!isSdCardMounted())
+	{
+		server.send(400, "text/plain", "SD card not mounted");
+		return;
+	}
+
+	if (isPayloadRunning())
+	{
+		server.send(409, "text/plain", "Cannot save while a payload is running");
+		return;
+	}
+
+	if (!server.hasArg("path") || !server.hasArg("content"))
+	{
+		server.send(400, "text/plain", "Missing path or content");
+		return;
+	}
+
+	String path = server.arg("path");
+	if (!path.startsWith("/")) { path = "/" + path; }
+	String content = server.arg("content");
+
+	if (writeSdFile(path, content))
+	{
+		server.send(200, "application/json", "{\"status\":\"ok\"}");
+	}
+	else
+	{
+		server.send(500, "text/plain", "Failed to save file");
+	}
+}
+
+// POST /sd/delete (form: path)
+void handleSdDelete()
+{
+	if (!requireAuth()) { return; }
+
+	if (!isSdCardMounted())
+	{
+		server.send(400, "text/plain", "SD card not mounted");
+		return;
+	}
+
+	if (isPayloadRunning())
+	{
+		server.send(409, "text/plain", "Cannot delete while a payload is running");
+		return;
+	}
+
+	if (!server.hasArg("path"))
+	{
+		server.send(400, "text/plain", "Missing 'path'");
+		return;
+	}
+
+	String path = server.arg("path");
+	if (!path.startsWith("/")) { path = "/" + path; }
+
+	if (deleteSdPath(path))
+	{
+		server.send(200, "application/json", "{\"status\":\"ok\"}");
+	}
+	else
+	{
+		server.send(400, "text/plain", "Failed to delete file or directory");
+	}
+}
+
+// POST /sd/run (form: path)
+void handleSdRun()
+{
+	if (!requireAuth()) { return; }
+
+	if (!isSdCardMounted())
+	{
+		server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"SD card not mounted\"}");
+		return;
+	}
+
+	if (!server.hasArg("path"))
+	{
+		server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing path\"}");
+		return;
+	}
+
+	String path = server.arg("path");
+	if (!path.startsWith("/")) { path = "/" + path; }
+
+	String err;
+	if (startSdPayload(path, &err))
+	{
+		String res = "{\"status\":\"started\",\"file\":\"" + path + "\"}";
+		server.send(200, "application/json", res);
+	}
+	else
+	{
+		String res = "{\"status\":\"error\",\"message\":\"" + err + "\"}";
+		server.send(409, "application/json", res);
+	}
+}
+
+// POST /sd/stop
+void handleSdStop()
+{
+	if (!requireAuth()) { return; }
+	stopSdPayload();
+	server.send(200, "application/json", "{\"status\":\"stopped\"}");
 }
