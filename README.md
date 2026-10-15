@@ -11,14 +11,18 @@
 - Preset values marked *Hidden* are never sent back to the browser - they are typed straight from the device - but they are still stored in plaintext in the device's flash.
 
 # Features
-- **Free-text typing** - type anything into a textarea and send it. `Enter` sends, `Shift+Enter` inserts a newline; an optional trailing newline can be added.
+- **Free-text typing** - type anything into a textarea and send it. `Enter` sends, `Shift+Enter` inserts a newline; an optional trailing newline can be added. Includes **📋 Paste & Send** (instant clipboard dispatch) and **👁️ Mask** (hides typed passwords on screen).
 - **Presets** - save reusable snippets (name -> value) and send them with one click.
     - **Groups** - organise presets into collapsible groups. A name must be unique within a group but may repeat across different groups.
     - **Per-preset visibility**:
         - *Plaintext* - value is shown in the UI.
         - *Masked* - value is shown as `••••`.
         - *Hidden* - value never leaves the device; it is typed straight from flash and never sent to the browser.
-    - **Special keys / chords** - preset values can embed `<TOKEN>` keys that plain text can't produce (see below). A visual *special key builder* in the editor inserts them for you.
+    - **Special keys / chords** - preset values can embed `<TOKEN>` keys that plain text can't produce (see below), as well as inline delay tokens like `<DELAY 500>`. A visual *special key builder* in the editor inserts them for you.
+- **MicroSD Card Storage & Payloads** - supports FAT32 microSD cards inserted into the T-Dongle S3 slot.
+    - **REST File Manager** - list, view, edit, download, upload, and delete files wirelessly via the browser.
+    - **DuckyScript / Macro Payload Runner** - execute `.txt` or `.ducky` payloads directly over USB HID keystrokes (supports `DELAY`, `STRING`, `ENTER`, `GUI r`, `CTRL ALT DEL`, `REPEAT`, etc.).
+- **Multi-Device Target Switcher** - switch between multiple dongles from the web header and manage custom target URLs.
 - **On-device status** - the display (and UART log) show the device IP once Wi-Fi connects; the web UI footer shows the firmware and storage-layout versions (from `/info`).
 
 # Special keys (tokens)
@@ -50,7 +54,7 @@ Supported tokens:
 
 # Quick start
 - Download and open the PlatformIO project in VS Code (PlatformIO IDE extension).
-- Edit `config.h`:
+- Copy `include/config.example.h` to `include/config.h` (ignored by git to keep secrets safe):
     - Set `WIFI_SSID`, `WIFI_PASS`, `MASTER_USER` and `MASTER_PASS`.
     - If using a board other than the [LILYGO ESP32 T-Dongle S3](https://lilygo.cc/products/t-dongle-s3), adjust the other board-specific values in `config.h` / `platformio.ini` as needed.
 - Compile & flash.

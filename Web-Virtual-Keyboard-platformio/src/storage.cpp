@@ -1,5 +1,5 @@
 #include "storage.h"
-#include <Wstring.h>
+#include <WString.h>
 #include <Preferences.h>
 #include "display.h"
 #include "globals.h"

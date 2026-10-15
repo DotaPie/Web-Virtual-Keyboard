@@ -3,3 +3,4 @@
 .github
 /src/html.cpp
 /include/html.h
+/include/config.h

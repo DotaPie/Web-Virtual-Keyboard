@@ -6,6 +6,7 @@
 #include "globals.h"
 #include "http_handlers.h"
 #include "display.h"
+#include "sd_card.h"
 
 bool connectWiFi()
 {
@@ -53,6 +54,9 @@ void setup()
 	// Check storage version and wipe if incompatible; ensures presets key exists
 	storageInit();
 
+	// Initialize MicroSD card
+	sdInit();
+
 #if ENABLE_DISPLAY
 	display_init();
 
@@ -77,9 +81,25 @@ void setup()
 	server.on("/presets", HTTP_DELETE, handleDeletePreset);
 	server.on("/send", HTTP_POST, handleSendPreset);
 
+	// MicroSD & Payload routes
+	server.on("/sd/status", HTTP_GET, handleSdStatus);
+	server.on("/sd/list", HTTP_GET, handleSdList);
+	server.on("/sd/file", HTTP_GET, handleSdFile);
+	server.on("/sd/upload", HTTP_POST, handleSdUpload, handleSdUploadChunk);
+	server.on("/sd/save", HTTP_POST, handleSdSave);
+	server.on("/sd/delete", HTTP_POST, handleSdDelete);
+	server.on("/sd/run", HTTP_POST, handleSdRun);
+
 	server.on("/favicon.ico", HTTP_GET, []()
 	{
 		server.send(204);
+	});
+
+	server.on("/manifest.json", HTTP_GET, []()
+	{
+		server.send(200, "application/manifest+json",
+			"{\"name\":\"Web Virtual Keyboard\",\"short_name\":\"Keyboard\",\"start_url\":\"/\","
+			"\"display\":\"standalone\",\"background_color\":\"#121315\",\"theme_color\":\"#ff7a18\"}");
 	});
 
 	server.begin();

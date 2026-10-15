@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Web Virtual Keyboard</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Keyboard">
+<meta name="theme-color" content="#121315">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff7a18'%3E%3Cpath d='M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff7a18'%3E%3Cpath d='M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z'/%3E%3C/svg%3E">
 
 <style>
 :root {
@@ -50,7 +58,23 @@ body {
 .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
 .send-card { position: sticky; top: 14px; }
 
-h1 { margin: 0; font-size: clamp(20px, 3.6vw, 32px); text-align: center; }
+.app-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.dongle-bar { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 8px; }
+.dongle-select { background: var(--field); color: var(--text); border: 1px solid var(--border); border-radius: 8px; height: 34px; padding: 0 10px; font-size: var(--fs-small); font-weight: 600; cursor: pointer; outline: none; }
+.dongle-select:focus { border-color: var(--accent-1); }
+
+textarea.masked { -webkit-text-security: disc; text-security: disc; }
+.btn-paste {
+	background: linear-gradient(180deg, var(--accent-1) 0%, var(--accent-2) 100%);
+	color: #101114; font-weight: 700; height: 42px; padding: 0 16px;
+	border: 0; border-radius: 10px; cursor: pointer;
+	display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+	transition: filter .15s, box-shadow .15s;
+}
+.btn-paste:hover { filter: brightness(1.15); box-shadow: 0 0 14px 4px rgba(255,122,24,.6); }
+.btn-paste:disabled { opacity: .65; cursor: not-allowed; box-shadow: none; }
+
+h1 { margin: 0; font-size: clamp(20px, 3.6vw, 32px); text-align: left; }
 h2 { margin: 0; font-size: 18px; color: var(--muted); font-weight: 700; letter-spacing: .3px; }
 h3 { margin: 0 0 4px; font-size: 20px; }
 
@@ -315,10 +339,79 @@ input.invalid, textarea.invalid {
 	.send-card { position: static; order: -1; }
 }
 
-@media (max-width: 700px) {
-	.preset { grid-template-columns: 1fr; align-items: start; }
-	.radios { flex-direction: column; gap: 10px; }
-	.modal-grid { grid-template-columns: 1fr; }
+/* ---------- MicroSD Card & Payloads ---------- */
+.sd-card { margin-top: 6px; }
+.sd-badge {
+	font-size: var(--fs-small);
+	font-weight: 600;
+	padding: 4px 12px;
+	border-radius: 999px;
+	background: var(--field);
+	border: 1px solid var(--border);
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+.sd-badge.ok { border-color: var(--ok); color: var(--ok); }
+.sd-badge.warn { border-color: var(--warn); color: var(--warn); }
+.sd-badge.none { border-color: var(--muted); color: var(--muted); }
+
+.sd-notice {
+	padding: 12px 16px;
+	border-radius: var(--radius-sm);
+	background: var(--field);
+	border: 1px dashed var(--border);
+	color: var(--muted);
+	font-size: var(--fs-small);
+	margin-bottom: 12px;
+}
+
+.sd-table-wrap {
+	overflow-x: auto;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--field);
+}
+.sd-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--fs-small);
+	text-align: left;
+}
+.sd-table th, .sd-table td {
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--border);
+}
+.sd-table tr:last-child td { border-bottom: 0; }
+.sd-table th {
+	background: var(--card);
+	color: var(--muted);
+	font-weight: 600;
+	text-transform: uppercase;
+	font-size: 12px;
+	letter-spacing: .5px;
+}
+.sd-file-name {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-weight: 600;
+	color: var(--text);
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+.sd-file-actions {
+	display: flex;
+	gap: 6px;
+	justify-content: flex-end;
+}
+.btn-run {
+	background: linear-gradient(180deg, var(--accent-1) 0%, var(--accent-2) 100%);
+	color: #101114 !important;
+	font-weight: 700;
+}
+.btn-run:hover {
+	filter: brightness(1.15);
+	box-shadow: 0 0 10px 2px rgba(255,122,24,.5);
 }
 </style>
 </head>
@@ -326,7 +419,14 @@ input.invalid, textarea.invalid {
 <body>
 <div class="wrap">
 
-	<h1>Web Virtual Keyboard</h1>
+	<header class="app-header">
+		<h1>Web Virtual Keyboard</h1>
+		<div class="dongle-bar">
+			<label for="dongleSelect" class="small">Target:</label>
+			<select id="dongleSelect" class="dongle-select" title="Switch target dongle"></select>
+			<button id="manageDonglesBtn" class="icon-btn" type="button" title="Manage dongles">⚙️</button>
+		</div>
+	</header>
 
 	<div class="main">
 
@@ -342,15 +442,22 @@ input.invalid, textarea.invalid {
 
 		<!-- ===== Raw typing card (right) ===== -->
 		<div class="card send-card">
-			<h2 style="margin-bottom:12px">Type text</h2>
+			<div class="card-head" style="margin-bottom:10px">
+				<h2 style="margin:0">Type text</h2>
+				<div style="display:flex; gap:6px; align-items:center">
+					<button id="maskToggle" class="btn-ghost btn-sm" type="button" title="Toggle password masking">👁️ Mask</button>
+					<button id="clearText" class="btn-ghost btn-sm" type="button" title="Clear text area">Clear</button>
+				</div>
+			</div>
 
 			<div class="row">
 				<textarea id="text" placeholder="Enter text here (Shift+Enter for newline, Enter to send)" autocomplete="off" autofocus></textarea>
 			</div>
 
-			<div class="row">
-				<button id="send" class="btn-sm" type="button">Send</button>
-				<label class="checkbox" for="appendNL">
+			<div class="row" style="margin-top:12px; gap:10px; align-items:center">
+				<button id="pasteSend" class="btn-paste" type="button" style="flex:1" title="Paste clipboard and send immediately">📋 Paste &amp; Send</button>
+				<button id="send" class="btn-sm btn-ghost" type="button">Send</button>
+				<label class="checkbox" for="appendNL" style="flex:none">
 					<input type="checkbox" id="appendNL" checked>
 					<span>Add CRLF</span>
 				</label>
@@ -358,6 +465,39 @@ input.invalid, textarea.invalid {
 		</div>
 
 	</div>
+
+		<!-- ===== MicroSD & Payloads card ===== -->
+		<div class="card sd-card">
+			<div class="card-head">
+				<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+					<h2 style="margin:0">📁 MicroSD Payloads &amp; Files</h2>
+					<span id="sdBadge" class="sd-badge none">Checking SD card...</span>
+				</div>
+				<div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">
+					<button id="sdRefreshBtn" class="btn-ghost btn-sm" type="button" title="Refresh files">🔄 Refresh</button>
+					<button id="sdNewBtn" class="btn-sm" type="button" title="Create new payload script">+ New Payload</button>
+					<button id="sdUploadBtn" class="btn-ghost btn-sm" type="button" title="Upload file to SD card">⬆️ Upload</button>
+					<input type="file" id="sdFileInput" style="display:none">
+				</div>
+			</div>
+
+			<div id="sdNotice" class="sd-notice" hidden></div>
+
+			<div id="sdTableWrap" class="sd-table-wrap">
+				<table class="sd-table" id="sdTable">
+					<thead>
+						<tr>
+							<th>File</th>
+							<th style="width:90px; text-align:right">Size</th>
+							<th style="width:230px; text-align:right">Actions</th>
+						</tr>
+					</thead>
+					<tbody id="sdFileList">
+						<tr><td colspan="3" style="text-align:center; color:var(--muted); padding:16px;">Checking MicroSD status...</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
 
 	<footer class="footer small">
 		<span>FW&nbsp;<b id="fwVer">-</b></span>
@@ -413,6 +553,70 @@ input.invalid, textarea.invalid {
 	</div>
 </div>
 
+<!-- ===== Manage Dongles modal ===== -->
+<div id="dongleModal" class="modal-backdrop" hidden>
+	<div class="modal" style="max-width:540px" role="dialog" aria-modal="true" aria-labelledby="dongleModalTitle">
+		<div class="modal-head">
+			<h3 id="dongleModalTitle">Manage Dongles</h3>
+			<button id="closeDongleModal" class="btn-ghost btn-sm" type="button">Close</button>
+		</div>
+
+		<div class="field" style="margin-top:12px">
+			<div id="dongleList" style="display:flex; flex-direction:column; gap:8px"></div>
+		</div>
+
+		<div class="hr"></div>
+
+		<h4 style="margin:0 0 10px; font-size:15px">Add Target Dongle</h4>
+		<div class="row" style="gap:8px">
+			<input id="newDongleName" type="text" placeholder="Label (e.g. Dongle 3)" style="flex:1; height:40px">
+			<input id="newDongleUrl" type="text" placeholder="https://..." style="flex:2; height:40px">
+			<button id="addDongleSubmit" class="btn-sm" type="button">+ Add</button>
+		</div>
+	</div>
+</div>
+
+<!-- ===== SD File / Payload modal ===== -->
+<div id="sdModal" class="modal-backdrop" hidden>
+	<div class="modal" role="dialog" aria-modal="true" aria-labelledby="sdModalTitle">
+		<div class="modal-head">
+			<h3 id="sdModalTitle">New Payload</h3>
+			<div class="modal-actions">
+				<button id="sdModalCancel" class="btn-ghost btn-sm" type="button">Cancel</button>
+				<button id="sdModalRun" class="btn-sm btn-run" type="button" title="Execute script over USB right now">▶️ Run Now</button>
+				<button id="sdModalSave" class="btn-sm" type="button">Save</button>
+			</div>
+		</div>
+
+		<div class="field" style="margin-top:14px">
+			<span class="field-label">File Path on MicroSD</span>
+			<input id="sdModalPath" type="text" placeholder="/payload.txt" autocomplete="off">
+		</div>
+
+		<div class="field" style="margin-top:14px">
+			<span class="field-label">Script Content (DuckyScript / Macros)</span>
+			<textarea id="sdModalContent" rows="12" style="font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; line-height:1.4" placeholder="REM Example DuckyScript payload&#10;DELAY 500&#10;GUI r&#10;DELAY 400&#10;STRING cmd&#10;ENTER&#10;DELAY 500&#10;STRING echo Hello from LILYGO T-Dongle S3!&#10;ENTER"></textarea>
+		</div>
+
+		<div class="palette" style="margin-top:14px">
+			<div class="palette-group">
+				<div class="glabel">Quick DuckyScript Tokens</div>
+				<div class="palette-keys">
+					<button class="key sd-token" type="button" data-token="DELAY 500">DELAY 500</button>
+					<button class="key sd-token" type="button" data-token="STRING ">STRING</button>
+					<button class="key sd-token" type="button" data-token="ENTER">ENTER</button>
+					<button class="key sd-token" type="button" data-token="GUI r">GUI r</button>
+					<button class="key sd-token" type="button" data-token="CTRL ALT DEL">CTRL ALT DEL</button>
+					<button class="key sd-token" type="button" data-token="TAB">TAB</button>
+					<button class="key sd-token" type="button" data-token="ESC">ESC</button>
+					<button class="key sd-token" type="button" data-token="REM ">REM</button>
+					<button class="key sd-token" type="button" data-token="<CTRL><ALT>t">&lt;CTRL&gt;&lt;ALT&gt;t</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -462,6 +666,10 @@ function setMsg(t, cls) {
 
 /* ---------- Send text (main textarea) ---------- */
 async function sendText(value) {
+	if (!value) {
+		setMsg("Nothing to send", "warn");
+		return false;
+	}
 	const newlineFlag = cbNL.checked ? "1" : "0";
 	const body = "text=" + encodeURIComponent(value) + "&newline=" + newlineFlag;
 
@@ -477,14 +685,56 @@ async function sendText(value) {
 		setMsg("Text sent", "ok");
 		text.value = "";
 		text.focus();
+		return true;
 	} catch (e) {
 		setMsg("Sending text failed", "err");
+		return false;
 	} finally {
 		btn.disabled = false;
 	}
 }
 
 btn.addEventListener("click", () => sendText(text.value || ""));
+
+/* ---------- Paste & Send + Masking ---------- */
+const pasteBtn   = document.getElementById("pasteSend");
+const maskToggle = document.getElementById("maskToggle");
+const clearBtn   = document.getElementById("clearText");
+
+maskToggle.addEventListener("click", () => {
+	const isMasked = text.classList.toggle("masked");
+	maskToggle.textContent = isMasked ? "👁️ Unmask" : "👁️ Mask";
+});
+
+clearBtn.addEventListener("click", () => {
+	text.value = "";
+	setMsg("Cleared", "ok");
+	text.focus();
+});
+
+pasteBtn.addEventListener("click", async () => {
+	if (!navigator.clipboard || !navigator.clipboard.readText) {
+		setMsg("Clipboard API unavailable. Long-press into the text box to paste.", "err");
+		return;
+	}
+	pasteBtn.disabled = true;
+	setMsg("Reading clipboard ...", "");
+	try {
+		const clip = await navigator.clipboard.readText();
+		if (!clip) {
+			setMsg("Clipboard is empty", "warn");
+			return;
+		}
+		const ok = await sendText(clip);
+		if (ok) {
+			setMsg(`Sent clipboard (${clip.length} chars)`, "ok");
+		}
+	} catch (err) {
+		setMsg("Clipboard access denied: " + (err.message || "permission prompt closed"), "err");
+	} finally {
+		pasteBtn.disabled = false;
+	}
+});
 
 // On touch-primary devices (phones/tablets) the on-screen keyboard's return key
 // should insert a newline, not send. Only bind Enter -> Send when the primary
@@ -905,11 +1155,402 @@ mName.addEventListener("input",  () => setFieldError(mName, nameErr, ""));
 mValue.addEventListener("input", () => setFieldError(mValue, valueErr, ""));
 mGroup.addEventListener("input", () => setFieldError(mName, nameErr, ""));
 modal.addEventListener("click", (e) => { if (e.target === modal) { closeModal(); } });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modal.hidden) { closeModal(); } });
+document.addEventListener("keydown", (e) => {
+	if (e.key === "Escape") {
+		if (!modal.hidden) { closeModal(); }
+		if (!dongleModal.hidden) { dongleModal.hidden = true; }
+	}
+});
+
+/* ---------- Dongle Switcher & Management ---------- */
+const DEFAULT_DONGLES = [
+	{ name: "Default (This Device)", url: window.location.origin }
+];
+
+const dongleSelect     = document.getElementById("dongleSelect");
+const manageDonglesBtn = document.getElementById("manageDonglesBtn");
+const dongleModal      = document.getElementById("dongleModal");
+const closeDongleModal = document.getElementById("closeDongleModal");
+const dongleList       = document.getElementById("dongleList");
+const newDongleName    = document.getElementById("newDongleName");
+const newDongleUrl     = document.getElementById("newDongleUrl");
+const addDongleSubmit  = document.getElementById("addDongleSubmit");
+
+function getDongles() {
+	try {
+		const saved = localStorage.getItem("wvk_dongles");
+		if (saved) {
+			const parsed = JSON.parse(saved);
+			if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+		}
+	} catch (e) {}
+	return DEFAULT_DONGLES;
+}
+
+function saveDongles(list) {
+	localStorage.setItem("wvk_dongles", JSON.stringify(list));
+	renderDongleSelect();
+}
+
+function renderDongleSelect() {
+	const list = getDongles();
+	dongleSelect.innerHTML = "";
+	const cur = window.location.origin.replace(/\/$/, "");
+
+	let matched = false;
+	list.forEach((d) => {
+		const opt = document.createElement("option");
+		opt.value = d.url;
+		opt.textContent = d.name;
+		if (d.url.replace(/\/$/, "") === cur) {
+			opt.selected = true;
+			matched = true;
+		}
+		dongleSelect.appendChild(opt);
+	});
+
+	if (!matched && cur.startsWith("http")) {
+		const opt = document.createElement("option");
+		opt.value = cur;
+		opt.textContent = "Current (" + window.location.hostname + ")";
+		opt.selected = true;
+		dongleSelect.prepend(opt);
+	}
+}
+
+function renderDongleList() {
+	const list = getDongles();
+	dongleList.innerHTML = "";
+	list.forEach((d, idx) => {
+		const row = document.createElement("div");
+		row.style.cssText = "display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:var(--field); border-radius:8px; border:1px solid var(--border)";
+
+		const info = document.createElement("div");
+		info.style.cssText = "min-width:0; overflow:hidden";
+		info.innerHTML = `<div style="font-weight:600; font-size:14px">${escapeHtml(d.name)}</div><div class="small" style="font-size:12px; overflow:hidden; text-overflow:ellipsis">${escapeHtml(d.url)}</div>`;
+
+		const delBtn = document.createElement("button");
+		delBtn.className = "icon-btn danger";
+		delBtn.type = "button";
+		delBtn.title = "Delete";
+		delBtn.textContent = "✕";
+		delBtn.addEventListener("click", () => {
+			if (list.length <= 1) {
+				setMsg("At least one dongle must remain in the list", "warn");
+				return;
+			}
+			list.splice(idx, 1);
+			saveDongles(list);
+			renderDongleList();
+		});
+
+		row.appendChild(info);
+		row.appendChild(delBtn);
+		dongleList.appendChild(row);
+	});
+}
+
+function escapeHtml(s) {
+	const div = document.createElement("div");
+	div.textContent = s || "";
+	return div.innerHTML;
+}
+
+dongleSelect.addEventListener("change", (e) => {
+	const target = e.target.value.replace(/\/$/, "");
+	if (target && target !== window.location.origin.replace(/\/$/, "")) {
+		setMsg("Switching to " + e.target.options[e.target.selectedIndex].text + " ...", "");
+		window.location.href = target;
+	}
+});
+
+manageDonglesBtn.addEventListener("click", () => {
+	renderDongleList();
+	dongleModal.hidden = false;
+});
+closeDongleModal.addEventListener("click", () => { dongleModal.hidden = true; });
+dongleModal.addEventListener("click", (e) => { if (e.target === dongleModal) dongleModal.hidden = true; });
+
+addDongleSubmit.addEventListener("click", () => {
+	const name = (newDongleName.value || "").trim();
+	let url = (newDongleUrl.value || "").trim();
+	if (!name || !url) {
+		setMsg("Please provide both a label and a URL", "warn");
+		return;
+	}
+	if (!/^https?:\/\//i.test(url)) {
+		url = "https://" + url;
+	}
+	const list = getDongles();
+	list.push({ name, url });
+	saveDongles(list);
+	renderDongleList();
+	newDongleName.value = "";
+	newDongleUrl.value = "";
+	setMsg("Added " + name, "ok");
+});
+
+// ===== MicroSD & Payloads =====
+const sdBadge        = document.getElementById("sdBadge");
+const sdNotice       = document.getElementById("sdNotice");
+const sdFileList     = document.getElementById("sdFileList");
+const sdRefreshBtn   = document.getElementById("sdRefreshBtn");
+const sdNewBtn       = document.getElementById("sdNewBtn");
+const sdUploadBtn    = document.getElementById("sdUploadBtn");
+const sdFileInput    = document.getElementById("sdFileInput");
+
+const sdModal        = document.getElementById("sdModal");
+const sdModalTitle   = document.getElementById("sdModalTitle");
+const sdModalPath    = document.getElementById("sdModalPath");
+const sdModalContent = document.getElementById("sdModalContent");
+const sdModalCancel  = document.getElementById("sdModalCancel");
+const sdModalSave    = document.getElementById("sdModalSave");
+const sdModalRun     = document.getElementById("sdModalRun");
+
+let sdMounted = false;
+
+async function checkSdStatus(refresh = false) {
+	try {
+		const res = await fetch("/sd/status" + (refresh ? "?refresh=1" : ""));
+		if (!res.ok) throw new Error("Status failed (" + res.status + ")");
+		const data = await res.json();
+		sdMounted = data.mounted;
+		if (data.mounted) {
+			const freeGB = (data.freeMB / 1024).toFixed(1);
+			const totGB  = (data.totalMB / 1024).toFixed(1);
+			const sizeStr = data.totalMB >= 1024 ? (totGB + " GB") : (data.totalMB + " MB");
+			const freeStr = data.freeMB >= 1024 ? (freeGB + " GB free") : (data.freeMB + " MB free");
+			sdBadge.className = "sd-badge ok";
+			sdBadge.textContent = "🟢 " + data.type + " " + sizeStr + " (" + freeStr + ")";
+			sdNotice.hidden = true;
+			loadSdFiles();
+		} else {
+			sdBadge.className = "sd-badge none";
+			sdBadge.textContent = "⚪ No SD Card Detected";
+			sdNotice.hidden = false;
+			sdNotice.innerHTML = "MicroSD card not detected or not formatted. Insert a FAT32-formatted microSD card into the USB connector slot and click <b>🔄 Refresh</b>.";
+			sdFileList.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--muted); padding:20px;">No SD card available</td></tr>';
+		}
+	} catch (e) {
+		sdBadge.className = "sd-badge warn";
+		sdBadge.textContent = "⚠️ SD Status Error";
+	}
+}
+
+async function loadSdFiles() {
+	if (!sdMounted) return;
+	try {
+		const res = await fetch("/sd/list?path=/");
+		if (!res.ok) throw new Error("List failed (" + res.status + ")");
+		const files = await res.json();
+		renderSdFiles(files);
+	} catch (e) {
+		setMsg("Failed to list SD files: " + e.message, "err");
+	}
+}
+
+function formatBytes(bytes) {
+	if (bytes === 0) return "0 B";
+	const k = 1024;
+	const sizes = ["B", "KB", "MB", "GB"];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+}
+
+function renderSdFiles(files) {
+	sdFileList.innerHTML = "";
+	if (!files || files.length === 0) {
+		sdFileList.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--muted); padding:20px;">No files found on SD card. Click <b>+ New Payload</b> or <b>⬆️ Upload</b>!</td></tr>';
+		return;
+	}
+
+	files.forEach(f => {
+		const tr = document.createElement("tr");
+
+		const tdName = document.createElement("td");
+		const icon = f.isDir ? "📁" : (f.name.endsWith(".txt") || f.name.endsWith(".ducky") ? "📜" : "📄");
+		tdName.innerHTML = '<span class="sd-file-name">' + icon + ' ' + escapeHtml(f.name) + '</span>';
+
+		const tdSize = document.createElement("td");
+		tdSize.style.textAlign = "right";
+		tdSize.style.color = "var(--muted)";
+		tdSize.textContent = f.isDir ? "-" : formatBytes(f.size);
+
+		const tdActions = document.createElement("td");
+		tdActions.className = "sd-file-actions";
+
+		if (!f.isDir) {
+			const runBtn = document.createElement("button");
+			runBtn.className = "btn-sm btn-run";
+			runBtn.textContent = "▶️ Run";
+			runBtn.title = "Execute as USB keyboard keystrokes";
+			runBtn.onclick = () => runSdFile(f.path, f.name);
+			tdActions.appendChild(runBtn);
+
+			const viewBtn = document.createElement("button");
+			viewBtn.className = "btn-sm btn-ghost";
+			viewBtn.textContent = "👁️ View";
+			viewBtn.onclick = () => openEditSdFile(f.path);
+			tdActions.appendChild(viewBtn);
+
+			const dlBtn = document.createElement("a");
+			dlBtn.className = "btn-sm btn-ghost";
+			dlBtn.textContent = "⬇️";
+			dlBtn.title = "Download file";
+			dlBtn.href = "/sd/file?path=" + encodeURIComponent(f.path) + "&download=1";
+			dlBtn.style.textDecoration = "none";
+			dlBtn.style.display = "inline-flex";
+			dlBtn.style.alignItems = "center";
+			dlBtn.style.justifyContent = "center";
+			tdActions.appendChild(dlBtn);
+		}
+
+		const delBtn = document.createElement("button");
+		delBtn.className = "btn-sm btn-ghost";
+		delBtn.textContent = "🗑️";
+		delBtn.title = "Delete file";
+		delBtn.onclick = () => deleteSdFile(f.path, f.name);
+		tdActions.appendChild(delBtn);
+
+		tr.appendChild(tdName);
+		tr.appendChild(tdSize);
+		tr.appendChild(tdActions);
+		sdFileList.appendChild(tr);
+	});
+}
+
+async function runSdFile(path, name) {
+	if (!confirm('Execute "' + name + '" over USB now? Keystrokes will be typed into the host PC.')) return;
+	setMsg('▶️ Running "' + name + '" ...', "");
+	try {
+		const res = await fetch("/sd/run", {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: "path=" + encodeURIComponent(path)
+		});
+		const data = await res.json();
+		if (data.status === "ok") {
+			setMsg('✅ "' + name + '" completed (' + data.lines + ' lines sent)', "ok");
+		} else {
+			setMsg('❌ Error running "' + name + '": ' + (data.message || "Failed"), "err");
+		}
+	} catch (e) {
+		setMsg("Execution request failed: " + e.message, "err");
+	}
+}
+
+async function openEditSdFile(path) {
+	try {
+		const res = await fetch("/sd/file?path=" + encodeURIComponent(path));
+		if (!res.ok) throw new Error("Could not load file");
+		const text = await res.text();
+		sdModalTitle.textContent = "Edit File";
+		sdModalPath.value = path;
+		sdModalPath.readOnly = true;
+		sdModalContent.value = text;
+		sdModal.hidden = false;
+	} catch (e) {
+		setMsg("Failed to open file: " + e.message, "err");
+	}
+}
+
+function openNewSdFile() {
+	sdModalTitle.textContent = "New Payload";
+	sdModalPath.value = "/payload.txt";
+	sdModalPath.readOnly = false;
+	sdModalContent.value = "REM DuckyScript / Macro payload\nDELAY 500\nSTRING echo Hello World\nENTER\n";
+	sdModal.hidden = false;
+	sdModalPath.focus();
+}
+
+async function saveSdFile() {
+	const path = sdModalPath.value.trim();
+	const content = sdModalContent.value;
+	if (!path) { alert("Path is required"); return; }
+
+	try {
+		const res = await fetch("/sd/save", {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: "path=" + encodeURIComponent(path) + "&content=" + encodeURIComponent(content)
+		});
+		if (!res.ok) throw new Error("Save failed");
+		sdModal.hidden = true;
+		setMsg("Saved " + path, "ok");
+		loadSdFiles();
+	} catch (e) {
+		alert("Failed to save: " + e.message);
+	}
+}
+
+async function deleteSdFile(path, name) {
+	if (!confirm('Are you sure you want to delete "' + name + '" from the SD card?')) return;
+	try {
+		const res = await fetch("/sd/delete", {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: "path=" + encodeURIComponent(path)
+		});
+		if (!res.ok) throw new Error("Delete failed");
+		setMsg("Deleted " + name, "ok");
+		loadSdFiles();
+	} catch (e) {
+		setMsg("Failed to delete: " + e.message, "err");
+	}
+}
+
+// Upload handling
+sdUploadBtn.onclick = () => sdFileInput.click();
+sdFileInput.onchange = async () => {
+	if (!sdFileInput.files || sdFileInput.files.length === 0) return;
+	const file = sdFileInput.files[0];
+	const formData = new FormData();
+	formData.append("file", file, "/" + file.name);
+
+	setMsg("Uploading " + file.name + " ...", "");
+	try {
+		const res = await fetch("/sd/upload", {
+			method: "POST",
+			body: formData
+		});
+		if (!res.ok) throw new Error("Upload failed");
+		setMsg("Uploaded " + file.name, "ok");
+		sdFileInput.value = "";
+		loadSdFiles();
+	} catch (e) {
+		setMsg("Upload error: " + e.message, "err");
+	}
+};
+
+sdRefreshBtn.onclick = () => { setMsg("Probing MicroSD card...", ""); checkSdStatus(true); };
+sdNewBtn.onclick = () => openNewSdFile();
+sdModalCancel.onclick = () => { sdModal.hidden = true; };
+sdModal.addEventListener("click", (e) => { if (e.target === sdModal) sdModal.hidden = true; });
+sdModalSave.onclick = () => saveSdFile();
+sdModalRun.onclick = async () => {
+	await saveSdFile();
+	runSdFile(sdModalPath.value.trim(), sdModalPath.value.trim());
+};
+
+// Token helper click listener
+document.querySelectorAll(".sd-token").forEach(btn => {
+	btn.onclick = () => {
+		const token = btn.dataset.token;
+		const ta = sdModalContent;
+		const start = ta.selectionStart;
+		const end = ta.selectionEnd;
+		const val = ta.value;
+		ta.value = val.substring(0, start) + token + (token.endsWith(" ") ? "" : "\n") + val.substring(end);
+		ta.focus();
+		ta.selectionStart = ta.selectionEnd = start + token.length + (token.endsWith(" ") ? 0 : 1);
+	};
+});
 
 buildPalette();
 loadPresets();
 loadInfo();
+renderDongleSelect();
+checkSdStatus();
 </script>
 </body>
 </html>
