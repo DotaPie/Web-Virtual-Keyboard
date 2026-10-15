@@ -339,6 +339,13 @@ input.invalid, textarea.invalid {
 	.send-card { position: static; order: -1; }
 }
 
+@media (max-width: 700px) {
+	.preset { grid-template-columns: 1fr; align-items: start; }
+	.radios { flex-direction: column; gap: 10px; }
+	.modal-grid { grid-template-columns: 1fr; }
+}
+
+
 /* ---------- MicroSD Card & Payloads ---------- */
 .sd-card { margin-top: 6px; }
 .sd-badge {
@@ -1178,13 +1185,29 @@ const addDongleSubmit  = document.getElementById("addDongleSubmit");
 
 function getDongles() {
 	try {
+		// Import target list if synced from another dongle via URL parameter
+		const params = new URLSearchParams(window.location.search);
+		const syncData = params.get("wvk_sync");
+		if (syncData) {
+			const parsed = JSON.parse(syncData);
+			if (Array.isArray(parsed) && parsed.length > 0) {
+				const valid = parsed.filter(d => d && typeof d.name === "string" && typeof d.url === "string");
+				if (valid.length > 0) {
+					localStorage.setItem("wvk_dongles", JSON.stringify(valid));
+				}
+			}
+			params.delete("wvk_sync");
+			const newSearch = params.toString() ? ("?" + params.toString()) : "";
+			window.history.replaceState({}, "", window.location.pathname + newSearch + window.location.hash);
+		}
+
 		const saved = localStorage.getItem("wvk_dongles");
 		if (saved) {
 			const parsed = JSON.parse(saved);
 			if (Array.isArray(parsed) && parsed.length > 0) return parsed;
 		}
 	} catch (e) {}
-	return DEFAULT_DONGLES;
+	return [...DEFAULT_DONGLES];
 }
 
 function saveDongles(list) {
@@ -1260,7 +1283,14 @@ dongleSelect.addEventListener("change", (e) => {
 	const target = e.target.value.replace(/\/$/, "");
 	if (target && target !== window.location.origin.replace(/\/$/, "")) {
 		setMsg("Switching to " + e.target.options[e.target.selectedIndex].text + " ...", "");
-		window.location.href = target;
+		const list = getDongles();
+		try {
+			const dest = new URL(target, window.location.href);
+			dest.searchParams.set("wvk_sync", JSON.stringify(list));
+			window.location.href = dest.toString();
+		} catch (err) {
+			window.location.href = target;
+		}
 	}
 });
 
@@ -1279,7 +1309,7 @@ addDongleSubmit.addEventListener("click", () => {
 		return;
 	}
 	if (!/^https?:\/\//i.test(url)) {
-		url = "https://" + url;
+		url = "http://" + url;
 	}
 	const list = getDongles();
 	list.push({ name, url });
@@ -1289,6 +1319,7 @@ addDongleSubmit.addEventListener("click", () => {
 	newDongleUrl.value = "";
 	setMsg("Added " + name, "ok");
 });
+
 
 // ===== MicroSD & Payloads =====
 const sdBadge        = document.getElementById("sdBadge");
@@ -1421,7 +1452,7 @@ function renderSdFiles(files) {
 
 async function runSdFile(path, name) {
 	if (!confirm('Execute "' + name + '" over USB now? Keystrokes will be typed into the host PC.')) return;
-	setMsg('▶️ Running "' + name + '" ...', "");
+	setMsg('▶️ Starting "' + name + '" ...', "");
 	try {
 		const res = await fetch("/sd/run", {
 			method: "POST",
@@ -1429,8 +1460,8 @@ async function runSdFile(path, name) {
 			body: "path=" + encodeURIComponent(path)
 		});
 		const data = await res.json();
-		if (data.status === "ok") {
-			setMsg('✅ "' + name + '" completed (' + data.lines + ' lines sent)', "ok");
+		if (data.status === "started" || data.status === "ok") {
+			setMsg('▶️ "' + name + '" running in background over USB', "ok");
 		} else {
 			setMsg('❌ Error running "' + name + '": ' + (data.message || "Failed"), "err");
 		}
@@ -1466,7 +1497,7 @@ function openNewSdFile() {
 async function saveSdFile() {
 	const path = sdModalPath.value.trim();
 	const content = sdModalContent.value;
-	if (!path) { alert("Path is required"); return; }
+	if (!path) { alert("Path is required"); return false; }
 
 	try {
 		const res = await fetch("/sd/save", {
@@ -1474,12 +1505,17 @@ async function saveSdFile() {
 			headers: { "Content-Type": "application/x-www-form-urlencoded" },
 			body: "path=" + encodeURIComponent(path) + "&content=" + encodeURIComponent(content)
 		});
-		if (!res.ok) throw new Error("Save failed");
+		if (!res.ok) {
+			const errText = await res.text();
+			throw new Error(errText || "Save failed");
+		}
 		sdModal.hidden = true;
 		setMsg("Saved " + path, "ok");
 		loadSdFiles();
+		return true;
 	} catch (e) {
 		alert("Failed to save: " + e.message);
+		return false;
 	}
 }
 
@@ -1513,7 +1549,10 @@ sdFileInput.onchange = async () => {
 			method: "POST",
 			body: formData
 		});
-		if (!res.ok) throw new Error("Upload failed");
+		if (!res.ok) {
+			const errJson = await res.json().catch(() => null);
+			throw new Error((errJson && errJson.message) || "Upload failed");
+		}
 		setMsg("Uploaded " + file.name, "ok");
 		sdFileInput.value = "";
 		loadSdFiles();
@@ -1528,9 +1567,11 @@ sdModalCancel.onclick = () => { sdModal.hidden = true; };
 sdModal.addEventListener("click", (e) => { if (e.target === sdModal) sdModal.hidden = true; });
 sdModalSave.onclick = () => saveSdFile();
 sdModalRun.onclick = async () => {
-	await saveSdFile();
+	const ok = await saveSdFile();
+	if (!ok) return;
 	runSdFile(sdModalPath.value.trim(), sdModalPath.value.trim());
 };
+
 
 // Token helper click listener
 document.querySelectorAll(".sd-token").forEach(btn => {

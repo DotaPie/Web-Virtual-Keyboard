@@ -89,6 +89,8 @@ void setup()
 	server.on("/sd/save", HTTP_POST, handleSdSave);
 	server.on("/sd/delete", HTTP_POST, handleSdDelete);
 	server.on("/sd/run", HTTP_POST, handleSdRun);
+	server.on("/sd/stop", HTTP_POST, handleSdStop);
+
 
 	server.on("/favicon.ico", HTTP_GET, []()
 	{

@@ -203,11 +203,78 @@ bool deleteSdPath(const String& path)
 	return SD_MMC.rmdir(path);
 }
 
+// Helper to convert named keys (e.g. F4, ENTER, TAB) or chords to <TOKEN> format
+static String convertOperandToTokens(const String& operand)
+{
+	String res = "";
+	int start = 0;
+	int len = operand.length();
+
+	while (start < len)
+	{
+		int sp = operand.indexOf(' ', start);
+		String token = (sp >= 0) ? operand.substring(start, sp) : operand.substring(start);
+		start = (sp >= 0) ? sp + 1 : len;
+
+		token.trim();
+		if (token.length() == 0) continue;
+
+		// Already wrapped in <...>
+		if (token.startsWith("<") && token.endsWith(">"))
+		{
+			res += token;
+			continue;
+		}
+
+		String upper = token;
+		upper.toUpperCase();
+
+		// Function keys F1 - F12
+		if (upper.length() >= 2 && upper.length() <= 3 && upper[0] == 'F' && isDigit(upper[1]))
+		{
+			res += "<" + upper + ">";
+			continue;
+		}
+
+		// Named special keys & modifiers
+		if (upper == "ENTER" || upper == "RETURN")            { res += "<ENTER>"; }
+		else if (upper == "TAB")                              { res += "<TAB>"; }
+		else if (upper == "ESC" || upper == "ESCAPE")         { res += "<ESC>"; }
+		else if (upper == "BACKSPACE" || upper == "BKSP")     { res += "<BKSP>"; }
+		else if (upper == "DEL" || upper == "DELETE")         { res += "<DEL>"; }
+		else if (upper == "SPACE" || upper == "SPC")          { res += "<SPACE>"; }
+		else if (upper == "UP" || upper == "UPARROW")         { res += "<UP>"; }
+		else if (upper == "DOWN" || upper == "DOWNARROW")     { res += "<DOWN>"; }
+		else if (upper == "LEFT" || upper == "LEFTARROW")     { res += "<LEFT>"; }
+		else if (upper == "RIGHT" || upper == "RIGHTARROW")   { res += "<RIGHT>"; }
+		else if (upper == "PAGEUP" || upper == "PGUP")        { res += "<PGUP>"; }
+		else if (upper == "PAGEDOWN" || upper == "PGDN")      { res += "<PGDN>"; }
+		else if (upper == "HOME")                             { res += "<HOME>"; }
+		else if (upper == "END")                              { res += "<END>"; }
+		else if (upper == "INSERT" || upper == "INS")         { res += "<INS>"; }
+		else if (upper == "PRINTSCREEN" || upper == "PRTSC")  { res += "<PRTSC>"; }
+		else if (upper == "SCROLLLOCK" || upper == "SCRLK")   { res += "<SCRLK>"; }
+		else if (upper == "NUMLOCK" || upper == "NUMLK")      { res += "<NUMLK>"; }
+		else if (upper == "PAUSE" || upper == "BREAK")        { res += "<PAUSE>"; }
+		else if (upper == "CAPSLOCK" || upper == "CAPS")      { res += "<CAPS>"; }
+		else if (upper == "CTRL" || upper == "CONTROL")       { res += "<CTRL>"; }
+		else if (upper == "ALT")                              { res += "<ALT>"; }
+		else if (upper == "SHIFT")                            { res += "<SHIFT>"; }
+		else if (upper == "GUI" || upper == "WINDOWS")        { res += "<GUI>"; }
+		else
+		{
+			// Single character or raw text
+			res += token;
+		}
+	}
+	return res;
+}
+
 // Executes a single line from a DuckyScript or macro payload
 static void executePayloadLine(const String& rawLine)
 {
 	String line = rawLine;
-	line.trim();
+	while (line.endsWith("\r") || line.endsWith("\n")) { line.remove(line.length() - 1); }
 	if (line.length() == 0) { return; }
 
 	// Comments
@@ -216,10 +283,17 @@ static void executePayloadLine(const String& rawLine)
 		return;
 	}
 
+	// Separate command and argument without stripping argument spaces
+	int firstSpace = line.indexOf(' ');
+	String cmd = (firstSpace >= 0) ? line.substring(0, firstSpace) : line;
+	cmd.trim();
+	cmd.toUpperCase();
+	String arg = (firstSpace >= 0) ? line.substring(firstSpace + 1) : "";
+
 	// Delay command: DELAY <ms>
-	if (line.startsWith("DELAY ") || line.startsWith("delay "))
+	if (cmd == "DELAY")
 	{
-		int ms = line.substring(6).toInt();
+		int ms = arg.toInt();
 		if (ms > 0 && ms <= 60000)
 		{
 			delay(ms);
@@ -227,133 +301,130 @@ static void executePayloadLine(const String& rawLine)
 		return;
 	}
 
-	// Literal typing: STRING <text>
-	if (line.startsWith("STRING ") || line.startsWith("string "))
+	// Literal typing: STRING <text> (preserves trailing spaces)
+	if (cmd == "STRING")
 	{
-		Keyboard.print(line.substring(7));
-		delay(TYPE_DELAY_MS);
+		sendValue(arg);
 		return;
 	}
 
 	// Literal typing with newline: STRINGLN <text>
-	if (line.startsWith("STRINGLN ") || line.startsWith("stringln "))
+	if (cmd == "STRINGLN")
 	{
-		Keyboard.print(line.substring(9));
-		Keyboard.print("\r\n");
-		delay(TYPE_DELAY_MS);
+		sendValue(arg);
+		sendValue("<ENTER>");
 		return;
 	}
 
-	String upper = line;
-	upper.toUpperCase();
-
-	// Standard DuckyScript standalone keys
-	if (upper == "ENTER" || upper == "RETURN")      { sendValue("<ENTER>"); return; }
-	if (upper == "ESC" || upper == "ESCAPE")        { sendValue("<ESC>"); return; }
-	if (upper == "TAB")                             { sendValue("<TAB>"); return; }
-	if (upper == "SPACE" || upper == "SPC")         { sendValue("<SPACE>"); return; }
-	if (upper == "BACKSPACE" || upper == "BKSP")    { sendValue("<BKSP>"); return; }
-	if (upper == "DELETE" || upper == "DEL")        { sendValue("<DEL>"); return; }
-	if (upper == "INSERT" || upper == "INS")        { sendValue("<INS>"); return; }
-	if (upper == "UP" || upper == "UPARROW")        { sendValue("<UP>"); return; }
-	if (upper == "DOWN" || upper == "DOWNARROW")    { sendValue("<DOWN>"); return; }
-	if (upper == "LEFT" || upper == "LEFTARROW")    { sendValue("<LEFT>"); return; }
-	if (upper == "RIGHT" || upper == "RIGHTARROW")  { sendValue("<RIGHT>"); return; }
-	if (upper == "PAGEUP" || upper == "PGUP")       { sendValue("<PGUP>"); return; }
-	if (upper == "PAGEDOWN" || upper == "PGDN")     { sendValue("<PGDN>"); return; }
-	if (upper == "HOME")                            { sendValue("<HOME>"); return; }
-	if (upper == "END")                             { sendValue("<END>"); return; }
-	if (upper == "CAPSLOCK" || upper == "CAPS")     { sendValue("<CAPS>"); return; }
-	if (upper == "PRINTSCREEN" || upper == "PRTSC") { sendValue("<PRTSC>"); return; }
-	if (upper == "SCROLLLOCK" || upper == "SCRLK")  { sendValue("<SCRLK>"); return; }
-	if (upper == "PAUSE" || upper == "BREAK")       { sendValue("<PAUSE>"); return; }
+	// Standalone keys
+	if (cmd == "ENTER" || cmd == "RETURN")      { sendValue("<ENTER>"); return; }
+	if (cmd == "ESC" || cmd == "ESCAPE")        { sendValue("<ESC>"); return; }
+	if (cmd == "TAB")                           { sendValue("<TAB>"); return; }
+	if (cmd == "SPACE" || cmd == "SPC")         { sendValue("<SPACE>"); return; }
+	if (cmd == "BACKSPACE" || cmd == "BKSP")    { sendValue("<BKSP>"); return; }
+	if (cmd == "DELETE" || cmd == "DEL")        { sendValue("<DEL>"); return; }
+	if (cmd == "INSERT" || cmd == "INS")        { sendValue("<INS>"); return; }
+	if (cmd == "UP" || cmd == "UPARROW")        { sendValue("<UP>"); return; }
+	if (cmd == "DOWN" || cmd == "DOWNARROW")    { sendValue("<DOWN>"); return; }
+	if (cmd == "LEFT" || cmd == "LEFTARROW")    { sendValue("<LEFT>"); return; }
+	if (cmd == "RIGHT" || cmd == "RIGHTARROW")  { sendValue("<RIGHT>"); return; }
+	if (cmd == "PAGEUP" || cmd == "PGUP")       { sendValue("<PGUP>"); return; }
+	if (cmd == "PAGEDOWN" || cmd == "PGDN")     { sendValue("<PGDN>"); return; }
+	if (cmd == "HOME")                          { sendValue("<HOME>"); return; }
+	if (cmd == "END")                           { sendValue("<END>"); return; }
+	if (cmd == "CAPSLOCK" || cmd == "CAPS")     { sendValue("<CAPS>"); return; }
+	if (cmd == "PRINTSCREEN" || cmd == "PRTSC") { sendValue("<PRTSC>"); return; }
+	if (cmd == "SCROLLLOCK" || cmd == "SCRLK")  { sendValue("<SCRLK>"); return; }
+	if (cmd == "PAUSE" || cmd == "BREAK")       { sendValue("<PAUSE>"); return; }
 
 	// Function keys F1 - F12
-	if (upper.length() >= 2 && upper.length() <= 3 && upper[0] == 'F' && isDigit(upper[1]))
+	if (cmd.length() >= 2 && cmd.length() <= 3 && cmd[0] == 'F' && isDigit(cmd[1]))
 	{
-		sendValue("<" + upper + ">");
+		sendValue("<" + cmd + ">");
 		return;
 	}
 
-	// Common Chords
-	if (upper == "CTRL ALT DEL" || upper == "CONTROL ALT DEL")
+	// Modifiers with named or single-char key operands
+	if (cmd == "GUI" || cmd == "WINDOWS")
 	{
-		sendValue("<CTRL><ALT><DEL>");
+		sendValue("<GUI>" + convertOperandToTokens(arg));
 		return;
 	}
-	if (upper == "CTRL SHIFT ESC" || upper == "CONTROL SHIFT ESC")
+	if (cmd == "CTRL" || cmd == "CONTROL")
 	{
-		sendValue("<CTRL><SHIFT><ESC>");
+		sendValue("<CTRL>" + convertOperandToTokens(arg));
 		return;
 	}
-
-	// Modifiers with key: GUI / WINDOWS
-	if (upper.startsWith("GUI ") || upper.startsWith("WINDOWS "))
+	if (cmd == "ALT")
 	{
-		int sp = line.indexOf(' ');
-		sendValue("<GUI>" + line.substring(sp + 1));
+		sendValue("<ALT>" + convertOperandToTokens(arg));
 		return;
 	}
-	// CTRL / CONTROL
-	if (upper.startsWith("CTRL ") || upper.startsWith("CONTROL "))
+	if (cmd == "SHIFT")
 	{
-		int sp = line.indexOf(' ');
-		sendValue("<CTRL>" + line.substring(sp + 1));
-		return;
-	}
-	// ALT
-	if (upper.startsWith("ALT "))
-	{
-		int sp = line.indexOf(' ');
-		sendValue("<ALT>" + line.substring(sp + 1));
-		return;
-	}
-	// SHIFT
-	if (upper.startsWith("SHIFT "))
-	{
-		int sp = line.indexOf(' ');
-		sendValue("<SHIFT>" + line.substring(sp + 1));
+		sendValue("<SHIFT>" + convertOperandToTokens(arg));
 		return;
 	}
 
-	// Default fallback: parse as macro line (with <TOKEN> keys or literal text)
+	// Default fallback: parse as macro line
 	sendValue(line);
 }
 
-bool runSdPayload(const String& path, String* errMsg, int* linesRun)
+// Background FreeRTOS task state
+static TaskHandle_t s_payloadTaskHandle = NULL;
+static String s_activePayloadPath = "";
+static volatile bool s_payloadRunning = false;
+static volatile bool s_payloadStopRequested = false;
+
+bool isPayloadRunning()
 {
-	if (!g_sdMounted)
+	return s_payloadRunning;
+}
+
+void stopSdPayload()
+{
+	if (s_payloadRunning)
 	{
-		if (errMsg != nullptr) { *errMsg = "SD card not mounted"; }
-		return false;
+		s_payloadStopRequested = true;
 	}
+}
+
+static void payloadTaskFunc(void* param)
+{
+	String path = s_activePayloadPath;
+	s_payloadRunning = true;
+	s_payloadStopRequested = false;
 
 	File f = SD_MMC.open(path, FILE_READ);
 	if (!f || f.isDirectory())
 	{
-		if (errMsg != nullptr) { *errMsg = "File not found or is a directory"; }
-		return false;
+		LogSerial.printf("[SD] Payload error: Cannot open %s\r\n", path.c_str());
+		if (f) f.close();
+		s_payloadRunning = false;
+		s_payloadTaskHandle = NULL;
+		vTaskDelete(NULL);
+		return;
 	}
 
-	LogSerial.printf("[SD] Running payload: %s\r\n", path.c_str());
-
+	LogSerial.printf("[SD] Starting background payload: %s\r\n", path.c_str());
 	Keyboard.releaseAll();
-	delay(20);
+	vTaskDelay(pdMS_TO_TICKS(50));
 
-	int count = 0;
 	String lastCommand = "";
 
-	while (f.available())
+	while (f.available() && !s_payloadStopRequested)
 	{
 		String line = f.readStringUntil('\n');
-		line.trim();
+		while (line.endsWith("\r") || line.endsWith("\n"))
+		{
+			line.remove(line.length() - 1);
+		}
 
 		if (line.length() == 0)
 		{
 			continue;
 		}
 
-		// Handle REPEAT <count>
 		String upper = line;
 		upper.toUpperCase();
 		if (upper.startsWith("REPEAT "))
@@ -361,10 +432,10 @@ bool runSdPayload(const String& path, String* errMsg, int* linesRun)
 			int reps = upper.substring(7).toInt();
 			if (reps > 0 && reps <= 100 && lastCommand.length() > 0)
 			{
-				for (int r = 0; r < reps; r++)
+				for (int r = 0; r < reps && !s_payloadStopRequested; r++)
 				{
 					executePayloadLine(lastCommand);
-					yield();
+					vTaskDelay(pdMS_TO_TICKS(10));
 				}
 			}
 			continue;
@@ -372,15 +443,64 @@ bool runSdPayload(const String& path, String* errMsg, int* linesRun)
 
 		lastCommand = line;
 		executePayloadLine(line);
-		count++;
-		yield();
+		vTaskDelay(pdMS_TO_TICKS(10));
 	}
 
 	f.close();
 	Keyboard.releaseAll();
-	delay(20);
+	vTaskDelay(pdMS_TO_TICKS(20));
 
-	LogSerial.printf("[SD] Payload complete: %d lines processed\r\n", count);
-	if (linesRun != nullptr) { *linesRun = count; }
+	LogSerial.printf("[SD] Background payload finished: %s\r\n", path.c_str());
+	s_payloadRunning = false;
+	s_payloadTaskHandle = NULL;
+	vTaskDelete(NULL);
+}
+
+bool startSdPayload(const String& path, String* errMsg)
+{
+	if (!g_sdMounted)
+	{
+		if (errMsg != nullptr) { *errMsg = "SD card not mounted"; }
+		return false;
+	}
+
+	if (s_payloadRunning)
+	{
+		if (errMsg != nullptr) { *errMsg = "A payload is already executing"; }
+		return false;
+	}
+
+	File f = SD_MMC.open(path, FILE_READ);
+	if (!f || f.isDirectory())
+	{
+		if (errMsg != nullptr) { *errMsg = "File not found or is a directory"; }
+		if (f) f.close();
+		return false;
+	}
+	f.close();
+
+	s_activePayloadPath = path;
+	BaseType_t res = xTaskCreatePinnedToCore(
+		payloadTaskFunc,
+		"sdPayload",
+		8192,
+		NULL,
+		1,
+		&s_payloadTaskHandle,
+		1
+	);
+
+	if (res != pdPASS)
+	{
+		if (errMsg != nullptr) { *errMsg = "Failed to launch background task"; }
+		return false;
+	}
+
 	return true;
 }
+
+bool runSdPayload(const String& path, String* errMsg, int* linesRun)
+{
+	return startSdPayload(path, errMsg);
+}
+

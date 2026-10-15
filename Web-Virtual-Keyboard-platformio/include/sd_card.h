@@ -34,4 +34,10 @@ bool deleteSdPath(const String& path);
 // Executes a payload / DuckyScript / macro script from the SD card as USB keystrokes.
 bool runSdPayload(const String& path, String* errMsg = nullptr, int* linesRun = nullptr);
 
+// Non-blocking background payload execution:
+bool startSdPayload(const String& path, String* errMsg = nullptr);
+bool isPayloadRunning();
+void stopSdPayload();
+
 #endif // SD_CARD_H
+

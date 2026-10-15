@@ -54,10 +54,12 @@ Supported tokens:
 
 # Quick start
 - Download and open the PlatformIO project in VS Code (PlatformIO IDE extension).
-- Copy `include/config.example.h` to `include/config.h` (ignored by git to keep secrets safe):
-    - Set `WIFI_SSID`, `WIFI_PASS`, `MASTER_USER` and `MASTER_PASS`.
-    - If using a board other than the [LILYGO ESP32 T-Dongle S3](https://lilygo.cc/products/t-dongle-s3), adjust the other board-specific values in `config.h` / `platformio.ini` as needed.
+- Configure credentials:
+    - Copy `Web-Virtual-Keyboard-platformio/include/config.example.h` to `Web-Virtual-Keyboard-platformio/include/config.private.h` (which is git-ignored and loaded automatically by `include/config.h`).
+    - In `include/config.private.h`, set `WIFI_SSID`, `WIFI_PASS`, `MASTER_USER`, and `MASTER_PASS`.
+    - If using a board other than the [LILYGO ESP32 T-Dongle S3](https://lilygo.cc/products/t-dongle-s3), adjust board-specific values in `include/config.private.h` / `platformio.ini` as needed.
 - Compile & flash.
+
     - `html.cpp` and `html.h` are generated automatically during the build (from `web/index.html`).
 - Plug the native USB port into the target machine (and UART into another machine if you want to see the IP or logs).
     - On a successful Wi-Fi connection, the device IP is shown on the display and printed over UART.

@@ -23,5 +23,7 @@ void handleSdUploadChunk();
 void handleSdSave();
 void handleSdDelete();
 void handleSdRun();
+void handleSdStop();
+
 
 #endif
